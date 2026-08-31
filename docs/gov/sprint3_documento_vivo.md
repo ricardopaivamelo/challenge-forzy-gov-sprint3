@@ -231,19 +231,181 @@ uma planta real.
 
 # 4 EVOLUÇÃO DA GOVERNANÇA — SPRINT 2
 
-## 4.1 Governança visual
+A Sprint 2 evolui a governança para a interface. A planta baixa inteligente é onde o operador e
+a IA se encontram. Cada elemento visual deve ser governado com clareza, rastreabilidade e
+segurança.
 
-A segunda sprint introduziu os estados “Validado por humano”, “Gerado por IA” e “Pendente de
-validação”, além de disclaimers para dado em tempo real, sensor em calibração e alerta de IA.
-Esses elementos são preservados e passam a ser alimentados por um fluxo executável.
+O artefato histórico desta etapa está preservado em [docs/historico/sprint2_mockup.html](../historico/sprint2_mockup.html).
+O arquivo mantém o HTML entregue na época, inclusive sua identificação histórica de 2025; a
+aplicação executável e as regras de decisão da Sprint 3 são descritas a seguir.
 
-## 4.2 Rastreabilidade de TAG e localização
+## 4.1 Entrega histórica: mockup da planta baixa inteligente
 
-Movimentações de ativos continuam exigindo TAG, usuário, timestamp, versão do mapa e método de
-validação. A decisão de governança não substitui a identidade do ativo: nenhum alerta pode ser
-emitido se a leitura não estiver associada de forma inequívoca a um motor.
+O mockup histórico apresenta o cabeçalho “Forzy Digital-Twin — Planta Baixa Inteligente” e a
+identificação “Sprint 2 | Demonstração de Governança Visual e Navegação”. A tela é organizada em
+uma barra lateral, uma área principal com a planta e um painel de detalhes. A barra lateral
+expõe o perfil de usuário, o status do motor e a linhagem do dado. A área principal representa
+duas linhas da planta em um SVG com grade:
 
-## 4.3 Correções aplicadas a partir do feedback
+- LINHA 01 — Setor de Compressão;
+- LINHA 02 — Setor de Bombeamento.
+
+Cada motor é representado por um ícone colorido e identificado por uma TAG. O painel de detalhes
+é aberto ao clicar no ícone e mostra equipamento, localização, especificação, valor atual
+(D+0), status e linhagem do dado. Conforme o registro, também são apresentados o validador e a
+data de validação, o algoritmo e o score, ou o último registro e o motivo de um sensor inativo.
+O rodapé registra que a demonstração permite consultar critérios de clareza, linhagem de dados e
+justificativa de status.
+
+**Quadro S2.1 — Ativos representados no HTML histórico**
+
+| TAG | Localização | Equipamento | Status | Linhagem do dado |
+|---|---|---|---|---|
+| MTR-01-001 | LINHA 01 — PONTO 05 | Motor de Indução Trifásico | Normal | Validado por humano |
+| MTR-01-002 | LINHA 01 — PONTO 15 | Motor de Indução Trifásico | Atenção | IA-Automático (não validado) |
+| MTR-01-003 | LINHA 01 — PONTO 25 | Motor de Indução Trifásico | Crítico | Pendente de Validação |
+| MTR-01-004 | LINHA 01 — PONTO 35 | Motor de Indução Trifásico | Normal | Validado por humano |
+| MTR-01-005 | LINHA 01 — PONTO 45 | Motor de Indução Trifásico | Sem Dados | Sensor inativo |
+| MTR-02-001 | LINHA 02 — PONTO 10 | Bomba Centrífuga com Motor Acoplado | Normal | Validado por humano |
+| MTR-02-002 | LINHA 02 — PONTO 20 | Bomba Centrífuga com Motor Acoplado | Atenção | Validado por humano |
+| MTR-02-003 | LINHA 02 — PONTO 30 | Bomba Centrífuga com Motor Acoplado | Crítico | Validado por humano |
+| MTR-02-004 | LINHA 02 — PONTO 40 | Bomba Centrífuga com Motor Acoplado | Normal | IA-Automático (não validado) |
+| MTR-02-005 | LINHA 02 — PONTO 50 | Bomba Centrífuga com Motor Acoplado | Atenção | IA-Automático (não validado) |
+
+Os registros acima são os dez ativos estáticos do objeto motorData do HTML. A cor do ícone
+expressa Normal, Atenção, Crítico ou Sem Dados; os badges distinguem Validado, IA-Gerado e
+Pendente.
+
+## 4.2 Critérios visuais e disclaimers
+
+O Protocolo de Disclaimers Visuais acompanha cada dado. O usuário sabe: é tempo real ou
+histórico? Qual a precisão? Foi validado por humano ou gerado por IA?
+
+**Quadro S2.2 — Exemplos de disclaimers definidos na Sprint 2**
+
+| Situação | Disclaimer |
+|---|---|
+| Valor em tempo real | “Dado em tempo real, atualizado a cada 1 minuto” |
+| Alerta IA-gerado | “Alerta gerado por IA com 92% confiança. Validar antes de agir” |
+| Alerta validado | “Alerta verificado por especialista em 14/07/2025” |
+| Dado faltante | “Sensor em calibração, retorna em ~2 minutos” |
+
+No HTML, o disclaimer aparece ao final do painel de detalhes, sob o título “Disclaimer &
+Justificativa”. Os registros históricos também mostram situações concretas: alerta de IA com
+confiança, alerta aguardando validação, operação normal, sensor em calibração e recomendação de
+inspeção. A indicação visual não elimina a revisão: ela informa a origem do dado, o estado
+conhecido e a justificativa disponível para o usuário.
+
+## 4.3 Rastreabilidade de navegação: TAG e localização
+
+Quando uma TAG é associada a um motor ou movida na planta, o sistema registra: ID do usuário,
+timestamp, versão do mapa, confiança da extração (se IA), hash SHA-256 do log.
+
+Os metadados obrigatórios definidos na Sprint 2 são:
+
+asset_uuid, location_id, association_timestamp, associated_by_user_id, validation_method,
+confidence_score, map_version_id, log_entry_hash.
+
+No mockup, a TAG identifica cada grupo de motor no mapa e a localização é exibida no detalhe
+como LINHA e PONTO. O registro não trata uma posição visual como suficiente para auditoria:
+identidade do ativo, momento da associação, método de validação e integridade do log precisam
+permanecer vinculados. A decisão de governança não substitui a identidade do ativo; nenhum
+alerta pode ser emitido se a leitura não estiver associada de forma inequívoca a um motor.
+
+## 4.4 Matriz de visibilidade operacional: RBAC na interface
+
+O RBAC da Sprint 1 foi refinado para a interface. Aplica-se minimização de dados: mostrar apenas
+o necessário para cada função.
+
+**Quadro S2.3 — Visibilidade por perfil na Sprint 2**
+
+| Perfil | Elementos visíveis |
+|---|---|
+| Técnico de Operação | Ícones de status, alertas, disclaimers |
+| Gestor de Planta | Ícones de status, alertas, disclaimers + histórico de movimentações |
+| Engenheiro de Dados | Tudo + dados brutos e parâmetros do modelo |
+| Auditor de TI | Tudo, mas leitura-only + logs completos |
+
+Os quatro perfis aparecem no seletor “Perfil de Usuário” do HTML: Técnico de Operação, Gestor
+de Planta, Engenheiro de Dados e Auditor de TI. O seletor torna a hierarquia de acesso visível,
+enquanto a matriz define o que cada função precisa consultar na planta, nos alertas, nos dados
+e nos logs.
+
+## 4.5 Linhagem de dados: validado versus IA-gerado
+
+Um indicador visual acompanha cada dado crítico:
+
+- **VALIDADO POR HUMANO:** ícone com checkmark verde. Descrição: “[Nome do validador] validou em
+  [data/hora]”;
+- **GERADO POR IA:** ícone com engrenagem. Descrição: “Extraído por IA v3.2.1 com XX% confiança”;
+- **PENDENTE DE VALIDAÇÃO:** ícone com interrogação amarela. Descrição: “Aguardando revisão
+  manual”.
+
+O HTML materializa esses estados pelos badges “✓ VALIDADO”, “⚙ IA-GERADO” e “? PENDENTE”. Os
+registros validados informam o técnico e a data; os registros gerados por IA informam algoritmo,
+confiança e data de extração; o registro pendente informa que a revisão ainda aguarda um
+especialista. O estado “Sem Dados” acrescenta o último registro e o motivo “Sensor em
+calibração preventiva”.
+
+## 4.6 Limite do mockup estático
+
+O HTML da Sprint 2 é um mockup navegável de dados fixos. Os dez registros ficam embutidos no
+objeto motorData, com status, linhagem, valores e disclaimers definidos no próprio arquivo. O
+script demonstra a abertura do painel de detalhes ao clicar em um motor; os seletores de
+perfil, status e linhagem representam a navegação planejada na interface.
+
+Essa entrega tornou a governança visível, mas não executava ainda a validação de Metric
+Contracts, a persistência de janelas, o Circuit Breaker ou o handoff humano. O status e a
+confiança mostrados no detalhe eram parte do registro visual do mockup. O HTML histórico,
+portanto, permanece como evidência da camada visual da Sprint 2, enquanto a aplicação da Sprint
+3 executa as regras que antes estavam apenas representadas.
+
+## 4.7 Evolução do mockup estático para a aplicação executável da Sprint 3
+
+Na Sprint 3, os critérios visuais e de segurança da Sprint 2 passam a ser avaliados por uma
+aplicação Streamlit executável. A tela deixa de depender somente de registros fixos e passa a
+calcular uma decisão governada para cada cenário, mantendo a decisão física sob responsabilidade
+humana.
+
+**Quadro S2.4 — Continuidade entre a interface histórica e a aplicação executável**
+
+| Sprint 2 — mockup HTML | Sprint 3 — aplicação executável |
+|---|---|
+| Planta baixa com dez ícones, TAGs, cores de status e painel de detalhe | Seleção de cenário e motor na barra lateral, cartões das leituras e tabela de Metric Contracts |
+| Status Normal, Atenção, Crítico e Sem Dados | Classificação executável por contrato, com unidade, limite de atenção, limite crítico, estado e versão |
+| Badge Validado, IA-Gerado ou Pendente | Score do Autoencoder, threshold 0,9513, persistência, confiança e decisão auditável |
+| Disclaimer e justificativa no detalhe | Ação automática explícita, motivo do bloqueio e evidências preservadas |
+| Confiança e algoritmo registrados no motorData | Circuit Breaker para dado inválido, inconsistência, baixa confiança ou divergência entre modelo e sensor |
+| Clique para consultar informação do ativo | Handoff para o Engenheiro de Manutenção, com decisão pendente, validada ou rejeitada e justificativa |
+| Registro visual sem comando físico | Registro, monitoramento e solicitação de inspeção; a aplicação não executa parada física |
+
+Os cinco cenários reproduzíveis usados pela aplicação demonstram essa passagem da representação
+para a execução:
+
+**Quadro S2.5 — Cenários executáveis da Sprint 3**
+
+| Cenário | Leituras apresentadas | Score | Persistência | Confiança | Resultado governado |
+|---|---|---:|---|---:|---|
+| Operação normal | 70,0 °C; 2,0 mm/s; 0,08 g | 0,50 | Não confirmada | 96% | NORMAL |
+| Faixa de atenção | 95,0 °C; 3,0 mm/s; 0,10 g | 0,70 | Não confirmada | 92% | ATTENTION |
+| Anomalia confirmada | 102,0 °C; 9,8 mm/s; 0,21 g | 1,30 | Três janelas | 94% | ALERT |
+| Circuit Breaker por dado inválido | sensor_error; 9,8 mm/s; 0,21 g | 1,30 | Três janelas | 94% | BLOCKED |
+| Handoff por baixa confiança | 102,0 °C; 9,8 mm/s; 0,21 g | 1,30 | Três janelas | 72% | BLOCKED / handoff |
+
+Na operação normal, o sistema registra e mantém o monitoramento. Na faixa de atenção, destaca o
+desvio sem confirmar falha. Na anomalia confirmada, combina score acima do threshold,
+persistência e evidência física para solicitar inspeção. No cenário de dado inválido, a
+temperatura recebe sensor_error enquanto vibração e aceleração estão críticas, e o Circuit
+Breaker bloqueia o alerta decisório preservando a evidência. No handoff, a confiança de 72% fica
+abaixo do mínimo de 85%, e o caso é encaminhado ao Engenheiro de Manutenção.
+
+A aplicação também permite editar as leituras manualmente para a demonstração e oferece ao
+especialista as opções Pendente, Validado e Rejeitado, sempre com justificativa. Assim, a
+continuidade com a Sprint 2 não está apenas na aparência: os disclaimers, a origem do dado, a
+clareza do status e a rastreabilidade são transformados em estados, regras e registros que
+podem ser verificados durante a execução.
+
+## 4.8 Correções aplicadas a partir do feedback
 
 - reincorporação dos papéis, matriz RBAC, cadeia D-I-C-I, protocolo de cadastro, dicionário de metadados e estratégia de fairness da Sprint 1;
 - correção do ano de 2025 para 2026;
