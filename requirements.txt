@@ -1,0 +1,11 @@
+# Runtime and dashboard
+numpy>=1.26
+pandas>=2.2
+altair>=5.0
+streamlit>=1.38,<2
+
+# Document generation
+python-docx>=1.2
+
+# Verification
+pytest>=8.0
