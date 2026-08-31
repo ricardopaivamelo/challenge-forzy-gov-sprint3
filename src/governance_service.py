@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
 import math
 from typing import Mapping
 
+from src.decision_policy import DecisionPolicy, load_default_decision_policy
 from src.governance_contracts import MetricContract, SensorAssessment
 
 
@@ -26,6 +27,8 @@ class GovernanceDecision:
     classifier_confidence: float | None
     requires_human: bool
     handoff: dict[str, object] | None
+    display_threshold: float | None = None
+    policy_version: str | None = None
 
 
 def _as_aware_datetime(value: str | datetime) -> datetime:
@@ -45,12 +48,20 @@ def _blocked_decision(
     threshold: float,
     persistent: bool,
     classifier_confidence: float | None,
+    policy: DecisionPolicy,
 ) -> GovernanceDecision:
     evidence = {
         "sensor_states": {field: item.state for field, item in assessments.items()},
         "anomaly_score": score,
         "model_threshold": threshold,
+        "display_threshold": policy.display_threshold,
         "persistent": persistent,
+        "persistence_windows": policy.persistence_windows,
+        "minimum_confidence": policy.minimum_confidence,
+        "minimum_completeness": policy.minimum_completeness,
+        "max_age_seconds": policy.max_age_seconds,
+        "future_tolerance_seconds": policy.future_tolerance_seconds,
+        "policy_version": policy.version,
         "breaker_reasons": list(reasons),
     }
     return GovernanceDecision(
@@ -76,6 +87,8 @@ def _blocked_decision(
             "reason": "Circuit Breaker acionado",
             "evidence": evidence,
         },
+        display_threshold=policy.display_threshold,
+        policy_version=policy.version,
     )
 
 
@@ -87,18 +100,33 @@ def evaluate_governance(
     timestamp: str | datetime,
     now: str | datetime,
     score: float,
-    threshold: float,
     persistent: bool,
     classifier_confidence: float | None,
     completeness_ratio: float,
     duplicate_timestamp: bool,
     model_available: bool,
     contracts: Mapping[str, MetricContract],
+    policy: DecisionPolicy | None = None,
+    threshold: float | None = None,
 ) -> GovernanceDecision:
     """Aplica contratos, incerteza e handoff sem comandar equipamento físico."""
 
     numeric_score = float(score)
-    numeric_threshold = float(threshold)
+    if policy is not None and not isinstance(policy, DecisionPolicy):
+        raise TypeError("policy deve ser uma instância de DecisionPolicy")
+    if policy is None:
+        policy = load_default_decision_policy()
+        if threshold is not None:
+            try:
+                legacy_threshold = float(threshold)
+            except (TypeError, ValueError) as exc:
+                raise ValueError("threshold do modelo deve ser positivo e finito") from exc
+            policy = replace(
+                policy,
+                model_threshold=legacy_threshold,
+                display_threshold=legacy_threshold,
+            )
+    numeric_threshold = float(policy.model_threshold)
     if not math.isfinite(numeric_threshold) or numeric_threshold <= 0:
         raise ValueError("threshold do modelo deve ser positivo e finito")
     if not math.isfinite(numeric_score):
@@ -130,15 +158,19 @@ def evaluate_governance(
             )
 
     age_seconds = (reference_time - event_time).total_seconds()
-    if age_seconds > 300:
+    if age_seconds > policy.max_age_seconds:
         reasons.append(f"Leitura desatualizada há {age_seconds / 60:.1f} minutos.")
-    if age_seconds < -60:
+    if age_seconds < -policy.future_tolerance_seconds:
         reasons.append("Timestamp da leitura está no futuro.")
     if duplicate_timestamp:
         reasons.append("Timestamp duplicado para o motor.")
-    if not math.isfinite(float(completeness_ratio)) or completeness_ratio < 0.90:
+    if (
+        not math.isfinite(float(completeness_ratio))
+        or completeness_ratio < policy.minimum_completeness
+    ):
         reasons.append(
-            f"Completude da janela abaixo de 90%: {float(completeness_ratio):.1%}."
+            "Completude da janela abaixo de "
+            f"{policy.minimum_completeness:.0%}: {float(completeness_ratio):.1%}."
         )
     if not model_available:
         reasons.append("Artefato ou versão do modelo indisponível.")
@@ -153,6 +185,7 @@ def evaluate_governance(
             threshold=numeric_threshold,
             persistent=persistent,
             classifier_confidence=classifier_confidence,
+            policy=policy,
         )
 
     sensor_states = {field: item.state for field, item in assessments.items()}
@@ -162,10 +195,23 @@ def evaluate_governance(
 
     uncertainty_reasons: list[str] = []
     if model_anomaly and not persistent:
-        uncertainty_reasons.append("Anomalia ainda não atingiu a persistência de três janelas.")
-    if model_anomaly and classifier_confidence is not None and classifier_confidence < 0.85:
+        window_count = {
+            1: "uma",
+            2: "duas",
+            3: "três",
+        }.get(policy.persistence_windows, str(policy.persistence_windows))
         uncertainty_reasons.append(
-            f"Confiança do classificador abaixo de 85%: {classifier_confidence:.1%}."
+            "Anomalia ainda não atingiu a persistência de "
+            f"{window_count} janelas."
+        )
+    if (
+        model_anomaly
+        and classifier_confidence is not None
+        and classifier_confidence < policy.minimum_confidence
+    ):
+        uncertainty_reasons.append(
+            "Confiança do classificador abaixo de "
+            f"{policy.minimum_confidence:.0%}: {classifier_confidence:.1%}."
         )
     if model_anomaly and not physical_evidence:
         uncertainty_reasons.append(
@@ -186,6 +232,7 @@ def evaluate_governance(
             threshold=numeric_threshold,
             persistent=persistent,
             classifier_confidence=classifier_confidence,
+            policy=policy,
         )
 
     if model_anomaly and physical_evidence:
@@ -200,7 +247,11 @@ def evaluate_governance(
                 "sensor_states": sensor_states,
                 "anomaly_score": numeric_score,
                 "model_threshold": numeric_threshold,
+                "display_threshold": policy.display_threshold,
                 "persistent": persistent,
+                "persistence_windows": policy.persistence_windows,
+                "minimum_confidence": policy.minimum_confidence,
+                "policy_version": policy.version,
             },
         }
     elif physical_evidence:
@@ -229,4 +280,6 @@ def evaluate_governance(
         classifier_confidence=classifier_confidence,
         requires_human=requires_human,
         handoff=handoff,
+        display_threshold=policy.display_threshold,
+        policy_version=policy.version,
     )

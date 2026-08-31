@@ -1,9 +1,11 @@
 from pathlib import Path
 
+from src.decision_policy import load_decision_policy
 from streamlit.testing.v1 import AppTest
 
 
 ROOT = Path(__file__).resolve().parents[1]
+POLICY = load_decision_policy(ROOT / "config" / "decision_policy.json")
 
 
 def test_dashboard_renders_normal_scenario_without_exception():
@@ -56,3 +58,12 @@ def test_dashboard_defaults_to_dark_theme_and_allows_switching_to_light():
 
     assert not app.exception
     assert app.radio[0].value == "Claro"
+
+
+def test_dashboard_displays_the_configured_threshold_values():
+    app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=10).run()
+
+    assert not app.exception
+    metric_values = [item.value for item in app.metric]
+    assert any(f"{POLICY.display_threshold:.2f}" in value for value in metric_values)
+    assert any(f"{POLICY.model_threshold:.4f}" in value for value in metric_values)

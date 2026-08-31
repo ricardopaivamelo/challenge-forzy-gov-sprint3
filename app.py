@@ -12,12 +12,14 @@ import streamlit as st
 
 from src.demo_scenarios import build_demo_scenarios, evaluate_demo_scenario
 from src.dashboard_data import build_contract_rows, build_handoff_record
+from src.decision_policy import load_decision_policy
 from src.governance_contracts import load_metric_contracts
 
 
 ROOT = Path(__file__).resolve().parent
+POLICY = load_decision_policy(ROOT / "config" / "decision_policy.json")
 CONTRACTS = load_metric_contracts(ROOT / "config" / "metric_contracts.json")
-SCENARIOS = build_demo_scenarios()
+SCENARIOS = build_demo_scenarios(POLICY)
 
 
 THEME_PALETTES = {
@@ -157,7 +159,9 @@ if manual:
         scenario,
         readings=readings,
         score=st.sidebar.number_input("Score do Autoencoder", value=scenario.score, step=0.05),
-        persistent=st.sidebar.checkbox("Persistente por três janelas", scenario.persistent),
+        persistent=st.sidebar.checkbox(
+            f"Persistente por {POLICY.persistence_windows} janelas", scenario.persistent
+        ),
         classifier_confidence=st.sidebar.slider(
             "Confiança do classificador",
             min_value=0.0,
@@ -167,7 +171,12 @@ if manual:
         ),
     )
 
-decision = evaluate_demo_scenario(scenario, CONTRACTS, motor_id=motor_id)
+decision = evaluate_demo_scenario(
+    scenario,
+    CONTRACTS,
+    motor_id=motor_id,
+    policy=POLICY,
+)
 
 st.subheader(scenario_name)
 st.write(scenario.description)
@@ -253,8 +262,15 @@ with left:
 
 with right:
     st.markdown("### Decisão auditável")
-    st.metric("Score / threshold", f"{decision.anomaly_score:.4f} / {decision.model_threshold:.4f}")
-    st.metric("Persistência", "3 janelas" if decision.persistent else "Não confirmada")
+    st.metric(
+        "Score / threshold exato",
+        f"{decision.anomaly_score:.4f} / {decision.model_threshold:.4f}",
+    )
+    st.metric("Threshold de exibição", f"{POLICY.display_threshold:.2f}")
+    st.metric(
+        "Persistência",
+        f"{POLICY.persistence_windows} janelas" if decision.persistent else "Não confirmada",
+    )
     st.metric(
         "Circuit Breaker",
         "ABERTO" if decision.circuit_breaker_open else "FECHADO",
@@ -288,13 +304,12 @@ if decision.requires_human:
                 recorded_at=datetime.now(timezone.utc),
                 readings=scenario.readings,
                 anomaly_score=decision.anomaly_score,
-                model_threshold=decision.model_threshold,
                 classifier_confidence=decision.classifier_confidence,
-                minimum_confidence=0.85,
                 breaker_reasons=decision.breaker_reasons,
                 contract_versions={
                     field: contract.version for field, contract in CONTRACTS.items()
                 },
+                policy=POLICY,
             )
             st.success("Validação humana registrada nesta sessão de demonstração.")
     if "last_handoff" in st.session_state:

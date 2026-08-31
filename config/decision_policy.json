@@ -1,0 +1,11 @@
+{
+  "policy_id": "forzy-decision-governance",
+  "version": "1.0",
+  "model_threshold": 0.9513,
+  "display_threshold": 0.95,
+  "persistence_windows": 3,
+  "minimum_confidence": 0.85,
+  "minimum_completeness": 0.90,
+  "max_age_seconds": 300,
+  "future_tolerance_seconds": 60
+}

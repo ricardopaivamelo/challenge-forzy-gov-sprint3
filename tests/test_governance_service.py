@@ -3,12 +3,14 @@ from pathlib import Path
 
 import pytest
 
+from src.decision_policy import load_decision_policy
 from src.governance_contracts import load_metric_contracts
 from src.governance_service import evaluate_governance
 
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACTS = load_metric_contracts(ROOT / "config" / "metric_contracts.json")
+POLICY = load_decision_policy(ROOT / "config" / "decision_policy.json")
 NOW = datetime(2026, 8, 31, 12, 0, tzinfo=timezone.utc)
 NORMAL = {
     "temperatura_c": 70.0,
@@ -30,13 +32,13 @@ def evaluate(**overrides):
         "timestamp": NOW,
         "now": NOW,
         "score": 0.50,
-        "threshold": 0.9513,
         "persistent": False,
         "classifier_confidence": 0.95,
         "completeness_ratio": 1.0,
         "duplicate_timestamp": False,
         "model_available": True,
         "contracts": CONTRACTS,
+        "policy": POLICY,
     }
     kwargs.update(overrides)
     return evaluate_governance(**kwargs)
@@ -125,4 +127,33 @@ def test_model_sensor_divergence_blocks_candidate_alert():
 
 def test_invalid_threshold_is_rejected_before_decision():
     with pytest.raises(ValueError, match="threshold"):
-        evaluate(threshold=0)
+        evaluate(policy=POLICY.__class__(
+            model_threshold=0,
+            display_threshold=0.95,
+            persistence_windows=3,
+            minimum_confidence=0.85,
+            minimum_completeness=0.90,
+            max_age_seconds=300,
+            future_tolerance_seconds=60,
+        ))
+
+
+def test_service_uses_exact_threshold_from_policy_not_display_rounding():
+    decision = evaluate(
+        readings={**NORMAL, "vibracao_mm_s": 9.5},
+        score=POLICY.display_threshold,
+        persistent=True,
+    )
+
+    assert decision.model_threshold == POLICY.model_threshold
+    assert decision.status == "blocked"
+    assert "divergência" in " ".join(decision.breaker_reasons).lower()
+
+
+def test_service_uses_policy_for_quality_boundaries():
+    decision = evaluate(
+        timestamp=NOW - timedelta(seconds=POLICY.max_age_seconds + 1),
+    )
+
+    assert decision.status == "blocked"
+    assert "desatualizada" in " ".join(decision.breaker_reasons).lower()

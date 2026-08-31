@@ -2,11 +2,13 @@ from pathlib import Path
 
 from datetime import datetime, timezone
 
+from src.decision_policy import load_decision_policy
 from src.dashboard_data import build_contract_rows, build_handoff_record
 from src.governance_contracts import load_metric_contracts
 
 
 ROOT = Path(__file__).resolve().parents[1]
+POLICY = load_decision_policy(ROOT / "config" / "decision_policy.json")
 
 
 def test_contract_table_normalizes_mixed_sensor_values_for_arrow():
@@ -46,6 +48,7 @@ def test_handoff_record_preserves_alert_context_for_audit():
         minimum_confidence=0.85,
         breaker_reasons=["Confiança 72,0% abaixo do mínimo de 85,0%."],
         contract_versions={"temperatura_c": "1.0", "vibracao_mm_s": "1.0"},
+        policy=POLICY,
     )
 
     assert record["alert_id"] == "ALT-MTR-017-20260831T123000Z"
@@ -57,3 +60,25 @@ def test_handoff_record_preserves_alert_context_for_audit():
     assert record["evidence"]["minimum_confidence"] == 0.85
     assert record["evidence"]["readings"]["vibracao_mm_s"] == 9.4
     assert record["evidence"]["contract_versions"]["temperatura_c"] == "1.0"
+
+
+def test_handoff_record_uses_policy_limits_for_audit_evidence():
+    record = build_handoff_record(
+        alert_id="ALT-MTR-007-20260831T120000Z",
+        motor_id=7,
+        scenario_name="Anomalia confirmada",
+        decision="Validado",
+        justification="Contexto operacional confirmado.",
+        recorded_at=datetime(2026, 8, 31, 12, 0, tzinfo=timezone.utc),
+        readings={"temperatura_c": 102.0},
+        anomaly_score=1.30,
+        classifier_confidence=0.94,
+        breaker_reasons=[],
+        contract_versions={"temperatura_c": "1.0"},
+        policy=POLICY,
+    )
+
+    assert record["evidence"]["model_threshold"] == POLICY.model_threshold
+    assert record["evidence"]["display_threshold"] == POLICY.display_threshold
+    assert record["evidence"]["minimum_confidence"] == POLICY.minimum_confidence
+    assert record["evidence"]["persistence_windows"] == POLICY.persistence_windows
