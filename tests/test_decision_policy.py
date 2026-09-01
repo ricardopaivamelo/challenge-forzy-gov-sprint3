@@ -21,6 +21,12 @@ def test_loads_the_versioned_governance_policy_values():
     assert policy.minimum_completeness == 0.90
     assert policy.max_age_seconds == 300
     assert policy.future_tolerance_seconds == 60
+    assert policy.metric_contract_version == "1.0"
+    assert policy.required_sensor_fields == (
+        "temperatura_c",
+        "vibracao_mm_s",
+        "aceleracao_g",
+    )
 
 
 @pytest.mark.parametrize(
@@ -44,6 +50,12 @@ def test_policy_rejects_invalid_limits(field, value):
         "minimum_completeness": 0.90,
         "max_age_seconds": 300,
         "future_tolerance_seconds": 60,
+        "metric_contract_version": "1.0",
+        "required_sensor_fields": (
+            "temperatura_c",
+            "vibracao_mm_s",
+            "aceleracao_g",
+        ),
     }
     values[field] = value
 

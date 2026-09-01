@@ -43,6 +43,7 @@ def test_handoff_record_preserves_alert_context_for_audit():
         recorded_at=recorded_at,
         readings={"temperatura_c": 84.0, "vibracao_mm_s": 9.4},
         anomaly_score=1.1,
+        consecutive_anomalous_windows=3,
         model_threshold=0.9513,
         classifier_confidence=0.72,
         minimum_confidence=0.85,
@@ -57,6 +58,7 @@ def test_handoff_record_preserves_alert_context_for_audit():
     assert record["decision"] == "Validado"
     assert record["justification"] == "Obra próxima alterou a vibração."
     assert record["evidence"]["classifier_confidence"] == 0.72
+    assert record["evidence"]["consecutive_anomalous_windows"] == 3
     assert record["evidence"]["minimum_confidence"] == 0.85
     assert record["evidence"]["readings"]["vibracao_mm_s"] == 9.4
     assert record["evidence"]["contract_versions"]["temperatura_c"] == "1.0"
@@ -72,6 +74,7 @@ def test_handoff_record_uses_policy_limits_for_audit_evidence():
         recorded_at=datetime(2026, 8, 31, 12, 0, tzinfo=timezone.utc),
         readings={"temperatura_c": 102.0},
         anomaly_score=1.30,
+        consecutive_anomalous_windows=POLICY.persistence_windows,
         classifier_confidence=0.94,
         breaker_reasons=[],
         contract_versions={"temperatura_c": "1.0"},

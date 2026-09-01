@@ -19,8 +19,10 @@ _LIMIT_FIELDS = (
     "max_age_seconds",
     "future_tolerance_seconds",
 )
+_CONTRACT_FIELDS = ("metric_contract_version", "required_sensor_fields")
+_REQUIRED_FIELDS = (*_LIMIT_FIELDS, *_CONTRACT_FIELDS)
 _METADATA_FIELDS = ("policy_id", "version")
-_ALLOWED_FIELDS = frozenset((*_LIMIT_FIELDS, *_METADATA_FIELDS))
+_ALLOWED_FIELDS = frozenset((*_REQUIRED_FIELDS, *_METADATA_FIELDS))
 _FIELD_ALIASES = {
     "threshold": "model_threshold",
     "exact_threshold": "model_threshold",
@@ -52,6 +54,12 @@ class DecisionPolicy:
     future_tolerance_seconds: int
     policy_id: str = "forzy-decision-governance"
     version: str = "1.0"
+    metric_contract_version: str = "1.0"
+    required_sensor_fields: tuple[str, ...] = (
+        "temperatura_c",
+        "vibracao_mm_s",
+        "aceleracao_g",
+    )
 
     def __post_init__(self) -> None:
         for field in ("model_threshold", "display_threshold"):
@@ -94,6 +102,22 @@ class DecisionPolicy:
             raise ValueError("policy_id deve ser um texto não vazio")
         if not isinstance(self.version, str) or not self.version.strip():
             raise ValueError("version deve ser um texto não vazio")
+        if (
+            not isinstance(self.metric_contract_version, str)
+            or not self.metric_contract_version.strip()
+        ):
+            raise ValueError("metric_contract_version deve ser um texto não vazio")
+        if (
+            not isinstance(self.required_sensor_fields, tuple)
+            or not self.required_sensor_fields
+            or any(
+                not isinstance(field, str) or not field.strip()
+                for field in self.required_sensor_fields
+            )
+        ):
+            raise ValueError("required_sensor_fields deve ser uma tupla não vazia de textos")
+        if len(set(self.required_sensor_fields)) != len(self.required_sensor_fields):
+            raise ValueError("required_sensor_fields não pode conter duplicatas")
 
     @property
     def exact_threshold(self) -> float:
@@ -162,10 +186,15 @@ class DecisionPolicy:
                 raise ValueError(f"valores conflitantes para {canonical}")
             normalized[canonical] = normalized.pop(alias)
 
-        missing = [field for field in _LIMIT_FIELDS if field not in normalized]
+        missing = [field for field in _REQUIRED_FIELDS if field not in normalized]
         if missing:
             raise ValueError(
                 "campos obrigatórios ausentes no contrato: " + ", ".join(missing)
+            )
+
+        if isinstance(normalized.get("required_sensor_fields"), list):
+            normalized["required_sensor_fields"] = tuple(
+                normalized["required_sensor_fields"]
             )
 
         try:

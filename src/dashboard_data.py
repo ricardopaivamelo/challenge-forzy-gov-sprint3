@@ -41,6 +41,7 @@ def build_handoff_record(
     recorded_at: datetime,
     readings: Mapping[str, object],
     anomaly_score: float,
+    consecutive_anomalous_windows: int,
     classifier_confidence: float | None,
     breaker_reasons: list[str] | tuple[str, ...],
     contract_versions: Mapping[str, str],
@@ -86,6 +87,7 @@ def build_handoff_record(
         "evidence": {
             "readings": dict(readings),
             "anomaly_score": float(anomaly_score),
+            "consecutive_anomalous_windows": int(consecutive_anomalous_windows),
             "model_threshold": float(effective_model_threshold),
             "display_threshold": float(effective_display_threshold),
             "classifier_confidence": classifier_confidence,

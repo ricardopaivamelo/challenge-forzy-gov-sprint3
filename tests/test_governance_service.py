@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -32,7 +33,7 @@ def evaluate(**overrides):
         "timestamp": NOW,
         "now": NOW,
         "score": 0.50,
-        "persistent": False,
+        "consecutive_anomalous_windows": 0,
         "classifier_confidence": 0.95,
         "completeness_ratio": 1.0,
         "duplicate_timestamp": False,
@@ -64,7 +65,7 @@ def test_persistent_model_anomaly_with_physical_evidence_creates_handoff():
     decision = evaluate(
         readings={**NORMAL, "vibracao_mm_s": 9.5, "aceleracao_g": 0.37},
         score=1.40,
-        persistent=True,
+        consecutive_anomalous_windows=POLICY.persistence_windows,
     )
 
     assert decision.status == "alert"
@@ -99,7 +100,7 @@ def test_non_persistent_model_anomaly_is_blocked_before_alert():
     decision = evaluate(
         readings={**NORMAL, "vibracao_mm_s": 6.5},
         score=1.10,
-        persistent=False,
+        consecutive_anomalous_windows=POLICY.persistence_windows - 1,
     )
 
     assert decision.status == "blocked"
@@ -110,7 +111,7 @@ def test_low_classifier_confidence_blocks_candidate_alert():
     decision = evaluate(
         readings={**NORMAL, "temperatura_c": 101.0},
         score=1.20,
-        persistent=True,
+        consecutive_anomalous_windows=POLICY.persistence_windows,
         classifier_confidence=0.84,
     )
 
@@ -119,7 +120,10 @@ def test_low_classifier_confidence_blocks_candidate_alert():
 
 
 def test_model_sensor_divergence_blocks_candidate_alert():
-    decision = evaluate(score=1.20, persistent=True)
+    decision = evaluate(
+        score=1.20,
+        consecutive_anomalous_windows=POLICY.persistence_windows,
+    )
 
     assert decision.status == "blocked"
     assert "divergência" in " ".join(decision.breaker_reasons).lower()
@@ -145,7 +149,7 @@ def test_service_uses_exact_threshold_from_policy_not_display_rounding():
     decision = evaluate(
         readings={**NORMAL, "vibracao_mm_s": 9.5},
         score=score_between_exact_and_display,
-        persistent=True,
+        consecutive_anomalous_windows=POLICY.persistence_windows,
     )
 
     assert decision.model_threshold == POLICY.model_threshold
@@ -160,3 +164,47 @@ def test_service_uses_policy_for_quality_boundaries():
 
     assert decision.status == "blocked"
     assert "desatualizada" in " ".join(decision.breaker_reasons).lower()
+
+
+def test_persistence_is_derived_from_the_consecutive_window_count():
+    decision = evaluate(
+        readings={**NORMAL, "vibracao_mm_s": 9.5},
+        score=1.40,
+        consecutive_anomalous_windows=POLICY.persistence_windows,
+    )
+
+    assert decision.persistent is True
+    assert decision.consecutive_anomalous_windows == POLICY.persistence_windows
+
+
+@pytest.mark.parametrize("count", [-1, True, 1.5])
+def test_invalid_consecutive_window_count_is_rejected(count):
+    with pytest.raises(ValueError, match="consecutive_anomalous_windows"):
+        evaluate(consecutive_anomalous_windows=count)
+
+
+@pytest.mark.parametrize(
+    "contracts",
+    [
+        {},
+        {"temperatura_c": CONTRACTS["temperatura_c"]},
+    ],
+)
+def test_missing_required_metric_contract_opens_circuit_breaker(contracts):
+    decision = evaluate(contracts=contracts)
+
+    assert decision.status == "blocked"
+    assert decision.circuit_breaker_open is True
+    assert any("contrato obrigatório ausente" in reason.lower() for reason in decision.breaker_reasons)
+
+
+def test_incompatible_metric_contract_version_opens_circuit_breaker():
+    incompatible = {
+        **CONTRACTS,
+        "temperatura_c": replace(CONTRACTS["temperatura_c"], version="0.9"),
+    }
+
+    decision = evaluate(contracts=incompatible)
+
+    assert decision.status == "blocked"
+    assert any("versão incompatível" in reason.lower() for reason in decision.breaker_reasons)

@@ -503,7 +503,7 @@ def clear_document_body(doc) -> None:
 def add_contract_metric(doc, number, name, description, values):
     doc.add_paragraph(f"2.3.{number} {name}", style="Heading 4")
     doc.add_paragraph(description)
-    add_table(doc, ["Indicador", "Valores"], values, [0.30, 0.70], font_size=10)
+    add_table(doc, ["Indicador", "Valores"], values, [0.30, 0.70], font_size=9)
 
 
 def build_metric_contract(reference: Path, output: Path) -> None:
@@ -610,14 +610,24 @@ def build_metric_contract(reference: Path, output: Path) -> None:
             [
                 "Anomalia do modelo",
                 (
-                    f"Score ≥ {DECISION_POLICY['model_threshold']:.16f} "
-                    f"(exibido {DECISION_POLICY['display_threshold']:.4f})"
+                    "Score ≥ "
+                    f"{DECISION_POLICY['model_threshold']:.16f}".replace(".", ",")
+                    + " (exibido "
+                    + f"{DECISION_POLICY['display_threshold']:.4f}".replace(".", ",")
+                    + ")"
                 ),
-                "Exigir 3 janelas persistentes",
+                f"Exigir {DECISION_POLICY['persistence_windows']} janelas persistentes",
             ],
             ["Alerta confirmado", "Modelo persistente + evidência física", "Solicitar inspeção humana"],
             ["Circuit Breaker", "Falha de dados, incerteza ou divergência", "Bloquear decisão e registrar motivo"],
-            ["Handoff", "Confiança < 85% ou situação contextual", "Encaminhar ao Engenheiro de Manutenção"],
+            [
+                "Handoff",
+                (
+                    "Confiança < "
+                    f"{DECISION_POLICY['minimum_confidence']:.0%} ou situação contextual"
+                ),
+                "Encaminhar ao Engenheiro de Manutenção",
+            ],
         ],
         [0.28, 0.30, 0.42],
         font_size=9.5,

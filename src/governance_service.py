@@ -24,6 +24,7 @@ class GovernanceDecision:
     anomaly_score: float
     model_threshold: float
     persistent: bool
+    consecutive_anomalous_windows: int
     classifier_confidence: float | None
     requires_human: bool
     handoff: dict[str, object] | None
@@ -47,6 +48,7 @@ def _blocked_decision(
     score: float,
     threshold: float,
     persistent: bool,
+    consecutive_anomalous_windows: int,
     classifier_confidence: float | None,
     policy: DecisionPolicy,
 ) -> GovernanceDecision:
@@ -56,6 +58,7 @@ def _blocked_decision(
         "model_threshold": threshold,
         "display_threshold": policy.display_threshold,
         "persistent": persistent,
+        "consecutive_anomalous_windows": consecutive_anomalous_windows,
         "persistence_windows": policy.persistence_windows,
         "minimum_confidence": policy.minimum_confidence,
         "minimum_completeness": policy.minimum_completeness,
@@ -79,6 +82,7 @@ def _blocked_decision(
         anomaly_score=score,
         model_threshold=threshold,
         persistent=persistent,
+        consecutive_anomalous_windows=consecutive_anomalous_windows,
         classifier_confidence=classifier_confidence,
         requires_human=True,
         handoff={
@@ -100,7 +104,7 @@ def evaluate_governance(
     timestamp: str | datetime,
     now: str | datetime,
     score: float,
-    persistent: bool,
+    consecutive_anomalous_windows: int,
     classifier_confidence: float | None,
     completeness_ratio: float,
     duplicate_timestamp: bool,
@@ -133,13 +137,35 @@ def evaluate_governance(
         raise ValueError("score do modelo deve ser finito")
     if classifier_confidence is not None and not 0 <= classifier_confidence <= 1:
         raise ValueError("classifier_confidence deve estar entre 0 e 1")
+    if (
+        isinstance(consecutive_anomalous_windows, bool)
+        or not isinstance(consecutive_anomalous_windows, int)
+        or consecutive_anomalous_windows < 0
+    ):
+        raise ValueError(
+            "consecutive_anomalous_windows deve ser um inteiro não negativo"
+        )
+    persistent = consecutive_anomalous_windows >= policy.persistence_windows
 
     event_time = _as_aware_datetime(timestamp)
     reference_time = _as_aware_datetime(now)
     reasons: list[str] = []
     assessments: dict[str, SensorAssessment] = {}
 
-    for field, contract in contracts.items():
+    for field in policy.required_sensor_fields:
+        contract = contracts.get(field)
+        if contract is None:
+            reasons.append(f"Contrato obrigatório ausente: {field}.")
+            continue
+        if contract.field != field:
+            reasons.append(
+                f"Contrato incompatível em {field}: declara o campo {contract.field}."
+            )
+        if contract.version != policy.metric_contract_version:
+            reasons.append(
+                f"Versão incompatível do contrato {field}: recebido "
+                f"{contract.version!r}, esperado {policy.metric_contract_version!r}."
+            )
         if field not in readings or readings[field] is None:
             reasons.append(f"Sensor obrigatório ausente: {field}.")
             continue
@@ -184,6 +210,7 @@ def evaluate_governance(
             score=numeric_score,
             threshold=numeric_threshold,
             persistent=persistent,
+            consecutive_anomalous_windows=consecutive_anomalous_windows,
             classifier_confidence=classifier_confidence,
             policy=policy,
         )
@@ -231,6 +258,7 @@ def evaluate_governance(
             score=numeric_score,
             threshold=numeric_threshold,
             persistent=persistent,
+            consecutive_anomalous_windows=consecutive_anomalous_windows,
             classifier_confidence=classifier_confidence,
             policy=policy,
         )
@@ -249,6 +277,7 @@ def evaluate_governance(
                 "model_threshold": numeric_threshold,
                 "display_threshold": policy.display_threshold,
                 "persistent": persistent,
+                "consecutive_anomalous_windows": consecutive_anomalous_windows,
                 "persistence_windows": policy.persistence_windows,
                 "minimum_confidence": policy.minimum_confidence,
                 "policy_version": policy.version,
@@ -277,6 +306,7 @@ def evaluate_governance(
         anomaly_score=numeric_score,
         model_threshold=numeric_threshold,
         persistent=persistent,
+        consecutive_anomalous_windows=consecutive_anomalous_windows,
         classifier_confidence=classifier_confidence,
         requires_human=requires_human,
         handoff=handoff,

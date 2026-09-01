@@ -123,8 +123,8 @@ Sprint 3.
 
 O fluxo Dado–Informação–Conhecimento–Inteligência permanece como estrutura explicativa do
 ativo. No nível de **Dado**, cada leitura bruta é vinculada ao motor, ao tipo de sensor, ao
-timestamp e à unidade recebida. No nível de **Informação**, o pipeline converte o valor para a
-unidade contratada e verifica domínio físico, atualidade, completude e duplicidade, produzindo
+timestamp e à unidade recebida. No nível de **Informação**, o pipeline confere se a unidade
+recebida corresponde à unidade contratada e verifica domínio físico, atualidade, completude e duplicidade, produzindo
 um estado de qualidade.
 
 No nível de **Conhecimento**, as leituras aprovadas são comparadas com o baseline individual do
@@ -138,7 +138,7 @@ confiança, coerência física e Circuit Breaker antes de chegar ao usuário.
 | Nível | Entrada e tratamento | Responsável | Saída governada |
 |---|---|---|---|
 | Dado | Leitura bruta, motor, timestamp e unidade original | Módulo de extração | Registro identificável da leitura |
-| Informação | Conversão de unidade e controles de qualidade | Pipeline de dados | Valor normalizado com estado de qualidade |
+| Informação | Validação da unidade e controles de qualidade | Pipeline de dados | Valor validado com estado de qualidade |
 | Conhecimento | Baseline, thresholds, histórico e score do modelo | Regras e modelo de ML | Desvio físico ou estatístico contextualizado |
 | Inteligência | Persistência, confiança, Circuit Breaker e limites de autonomia | Serviço de governança | Decisão explicável, bloqueio ou handoff |
 
@@ -342,11 +342,9 @@ e nos logs.
 
 Um indicador visual acompanha cada dado crítico:
 
-- **VALIDADO POR HUMANO:** ícone com checkmark verde. Descrição: “[Nome do validador] validou em
-  [data/hora]”;
-- **GERADO POR IA:** ícone com engrenagem. Descrição: “Extraído por IA v3.2.1 com XX% confiança”;
-- **PENDENTE DE VALIDAÇÃO:** ícone com interrogação amarela. Descrição: “Aguardando revisão
-  manual”.
+- **VALIDADO POR HUMANO:** checkmark verde; a descrição registra validador, data e hora;
+- **GERADO POR IA:** engrenagem; a descrição registra versão do algoritmo e confiança;
+- **PENDENTE DE VALIDAÇÃO:** interrogação amarela; a descrição informa revisão pendente.
 
 O HTML materializa esses estados pelos badges “✓ VALIDADO”, “⚙ IA-GERADO” e “? PENDENTE”. Os
 registros validados informam o técnico e a data; os registros gerados por IA informam algoritmo,
@@ -406,7 +404,8 @@ temperatura recebe sensor_error enquanto vibração e aceleração estão críti
 Breaker bloqueia o alerta decisório preservando a evidência. No handoff, a confiança de 72% fica
 abaixo do mínimo de 85%, e o caso é encaminhado ao Engenheiro de Manutenção.
 
-A aplicação também permite editar as leituras manualmente para a demonstração e oferece ao
+A aplicação também permite editar as leituras e a quantidade de janelas anômalas consecutivas
+para a demonstração e oferece ao
 especialista as opções Pendente, Validado e Rejeitado, sempre com justificativa. Assim, a
 continuidade com a Sprint 2 não está apenas na aparência: os disclaimers, a origem do dado, a
 clareza do status e a rastreabilidade são transformados em estados, regras e registros que
@@ -483,6 +482,7 @@ sustenta uma recomendação autônoma. O evento continua visível para investiga
 Condições implementadas:
 
 - sensor obrigatório ausente, nulo, não numérico ou fora do domínio físico;
+- Metric Contract obrigatório ausente ou com versão incompatível;
 - unidade incompatível;
 - timestamp duplicado ou leitura atrasada por mais de cinco minutos;
 - completude inferior a 90% da janela;
@@ -497,7 +497,8 @@ Quando o alerta exige conhecimento contextual, o sistema cria um handoff com est
 `pending`. O pacote inclui identificação do motor, leituras, thresholds, score, persistência,
 confiança, motivo do breaker, evidências e destinatário. O Engenheiro de Manutenção pode
 marcar a recomendação como validada ou rejeitada, registrando justificativa. A alteração
-fica vinculada ao alerta e não modifica os fatos produzidos pelo modelo.
+fica vinculada ao alerta, não modifica os fatos produzidos pelo modelo e é acrescentada ao
+histórico local `runtime/handoff_audit.jsonl`, além de permanecer visível na sessão atual.
 
 ## 5.6 Informação explícita e informação tácita
 

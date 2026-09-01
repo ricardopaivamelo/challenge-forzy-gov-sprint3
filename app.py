@@ -10,6 +10,7 @@ import altair as alt
 import pandas as pd
 import streamlit as st
 
+from src.audit_log import append_audit_record
 from src.demo_scenarios import build_demo_scenarios, evaluate_demo_scenario
 from src.dashboard_data import build_contract_rows, build_handoff_record
 from src.decision_policy import load_decision_policy
@@ -17,6 +18,7 @@ from src.governance_contracts import load_metric_contracts
 
 
 ROOT = Path(__file__).resolve().parent
+AUDIT_LOG_PATH = ROOT / "runtime" / "handoff_audit.jsonl"
 POLICY = load_decision_policy(ROOT / "config" / "decision_policy.json")
 CONTRACTS = load_metric_contracts(ROOT / "config" / "metric_contracts.json")
 SCENARIOS = build_demo_scenarios(POLICY)
@@ -159,8 +161,13 @@ if manual:
         scenario,
         readings=readings,
         score=st.sidebar.number_input("Score do Autoencoder", value=scenario.score, step=0.05),
-        persistent=st.sidebar.checkbox(
-            f"Persistente por {POLICY.persistence_windows} janelas", scenario.persistent
+        consecutive_anomalous_windows=int(
+            st.sidebar.number_input(
+                "Janelas anômalas consecutivas",
+                min_value=0,
+                value=scenario.consecutive_anomalous_windows,
+                step=1,
+            )
         ),
         classifier_confidence=st.sidebar.slider(
             "Confiança do classificador",
@@ -269,7 +276,7 @@ with right:
     st.metric("Threshold de exibição", f"{POLICY.display_threshold:.4f}")
     st.metric(
         "Persistência",
-        f"{POLICY.persistence_windows} janelas" if decision.persistent else "Não confirmada",
+        f"{decision.consecutive_anomalous_windows}/{POLICY.persistence_windows} janelas",
     )
     st.metric(
         "Circuit Breaker",
@@ -295,7 +302,7 @@ if decision.requires_human:
         else:
             event_key = decision.timestamp.replace("-", "").replace(":", "")
             event_key = event_key.replace("+0000", "Z")
-            st.session_state["last_handoff"] = build_handoff_record(
+            handoff_record = build_handoff_record(
                 alert_id=f"ALT-MTR-{motor_id:03d}-{event_key}",
                 motor_id=motor_id,
                 scenario_name=scenario_name,
@@ -304,6 +311,9 @@ if decision.requires_human:
                 recorded_at=datetime.now(timezone.utc),
                 readings=scenario.readings,
                 anomaly_score=decision.anomaly_score,
+                consecutive_anomalous_windows=(
+                    decision.consecutive_anomalous_windows
+                ),
                 classifier_confidence=decision.classifier_confidence,
                 breaker_reasons=decision.breaker_reasons,
                 contract_versions={
@@ -311,7 +321,9 @@ if decision.requires_human:
                 },
                 policy=POLICY,
             )
-            st.success("Validação humana registrada nesta sessão de demonstração.")
+            append_audit_record(AUDIT_LOG_PATH, handoff_record)
+            st.session_state["last_handoff"] = handoff_record
+            st.success("Validação humana registrada no histórico local da demonstração.")
     if "last_handoff" in st.session_state:
         st.markdown("#### Último registro auditável da sessão")
         st.json(st.session_state["last_handoff"], expanded=False)

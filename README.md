@@ -28,7 +28,7 @@ Os detalhes auditáveis estão em [`results/provenance.json`](results/provenance
 - compara o score com o threshold exato e exige persistência de três janelas;
 - bloqueia a decisão diante de dado inválido, incompleto, atrasado, incompatível ou incerto;
 - registra o motivo do Circuit Breaker e preserva as evidências;
-- cria handoff para o Engenheiro de Manutenção;
+- cria handoff para o Engenheiro de Manutenção e persiste a decisão em um histórico JSONL local;
 - nunca comanda parada física do motor ou da planta.
 
 Os parâmetros operacionais ficam centralizados em [`config/decision_policy.json`](config/decision_policy.json)
@@ -47,7 +47,8 @@ streamlit run app.py
 
 A aplicação oferece cinco cenários reproduzíveis: operação normal, atenção, anomalia confirmada,
 Circuit Breaker por dado inválido e handoff por baixa confiança. O tema escuro é o padrão e pode
-ser trocado pela barra lateral.
+ser trocado pela barra lateral. As validações humanas registradas pela interface são acrescentadas
+em `runtime/handoff_audit.jsonl`; essa pasta de execução não é versionada no Git.
 
 ## Entregáveis acadêmicos
 
@@ -88,6 +89,7 @@ python scripts/build_gov_documents.py \
 ```bash
 python -m pytest -q
 python -m pip check
+python scripts/build_gov_documents.py --main-output /tmp/challenge_sprint3_gov.docx
 ```
 
 Os testes cobrem fronteiras dos thresholds, política de decisão, qualidade dos dados, Circuit
