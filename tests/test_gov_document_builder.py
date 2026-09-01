@@ -71,6 +71,32 @@ def test_final_considerations_start_on_a_new_page(tmp_path):
     assert 'w:type="page"' in previous_paragraph_xml
 
 
+def test_scenario_table_keeps_score_values_on_one_line(tmp_path):
+    output = tmp_path / "challenge_sprint3_gov.docx"
+
+    build_main_document(output)
+
+    document = Document(output)
+    scenario_table = next(
+        table
+        for table in document.tables
+        if [cell.text for cell in table.rows[0].cells]
+        == [
+            "Cenário",
+            "Leituras apresentadas",
+            "Score",
+            "Persistência",
+            "Confiança",
+            "Resultado governado",
+        ]
+    )
+    score_width = int(
+        scenario_table._tbl.tblGrid.gridCol_lst[2].get(qn("w:w"))
+    )
+
+    assert score_width >= 800
+
+
 def test_living_document_preserves_detailed_sprint_1_controls(tmp_path):
     output = tmp_path / "challenge_sprint3_gov.docx"
 

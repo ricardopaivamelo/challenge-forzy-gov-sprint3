@@ -283,6 +283,15 @@ def add_markdown_table(doc, lines: list[str]) -> None:
         weights = [1.45, 0.90, 1.0, 1.40, 1.0]
     elif headers == ["Métrica", "Unidade", "Normal", "Atenção", "Crítico", "Origem do limite"]:
         weights = [1.45, 0.75, 1.0, 1.35, 1.0, 2.45]
+    elif headers == [
+        "Cenário",
+        "Leituras apresentadas",
+        "Score",
+        "Persistência",
+        "Confiança",
+        "Resultado governado",
+    ]:
+        weights = [2.1, 1.9, 0.8, 1.0, 0.8, 1.3]
     elif len(headers) == 7:
         weights = [1.10, 1.25, 1.25, 1.10, 1.10, 1.0, 1.40]
     else:

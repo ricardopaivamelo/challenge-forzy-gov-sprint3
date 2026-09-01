@@ -49,6 +49,8 @@ A aplicação oferece cinco cenários reproduzíveis: operação normal, atenç�
 Circuit Breaker por dado inválido e handoff por baixa confiança. O tema escuro é o padrão e pode
 ser trocado pela barra lateral. As validações humanas registradas pela interface são acrescentadas
 em `runtime/handoff_audit.jsonl`; essa pasta de execução não é versionada no Git.
+O arquivo é append-only pela aplicação demonstrativa, mas não substitui um armazenamento industrial
+com controle de concorrência e proteção contra adulteração.
 
 ## Entregáveis acadêmicos
 

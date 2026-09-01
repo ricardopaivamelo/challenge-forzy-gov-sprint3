@@ -97,7 +97,7 @@ reescrever retroativamente os registros.
 | Técnico de Operação | Monitorar motores, receber alertas e registrar ocorrências | Visualiza alertas e evidências, sem alterar contratos |
 | Gestor de Planta | Gerenciar ativos, histórico e limites operacionais | Propõe e aprova revisões dos limites da planta |
 | Engenheiro de Dados/IA | Validar dados, modelos e pipelines | Mantém versão do modelo e investiga divergências |
-| Auditor de Segurança/TI | Consultar logs imutáveis em modo leitura | Audita contrato, breaker, handoff e decisão humana |
+| Auditor de Segurança/TI | Consultar logs de auditoria em modo leitura | Audita contrato, breaker, handoff e decisão humana |
 
 Fonte: Elaborado pelos autores (2026), com base na Sprint 1.
 
