@@ -62,13 +62,28 @@
 | Fonte do limite | Quantis 95% e 99% de 26.291 leituras normais simuladas |
 | Limitação | Aceleração derivada da vibração a 60 Hz; não é medição de acelerômetro |
 
-## 5 Qualidade de dados e Circuit Breaker
+## 5 Contrato do score de anomalia
+
+| Cláusula | Valor |
+|---|---|
+| Modelo governado no demonstrador | Autoencoder |
+| Métrica | Erro de reconstrução por janela |
+| Threshold exato usado na decisão | `0,9512501159120564` |
+| Threshold arredondado para exibição | `0,9513` |
+| Gatilho candidato | Score maior ou igual ao threshold exato |
+| Persistência exigida | Três janelas anômalas consecutivas |
+| Evidência complementar | Ao menos um sensor em atenção ou estado crítico |
+| Ação automática máxima | Registrar alerta e solicitar inspeção humana |
+| Fonte | Artefato imutável do projeto GenAI, identificado em `results/provenance.json` |
+
+## 6 Qualidade de dados e Circuit Breaker
 
 | Regra | Resultado |
 |---|---|
 | Campo ausente, nulo ou não numérico | Bloquear alerta decisório |
 | Valor fora do domínio físico | Bloquear alerta decisório |
 | Unidade incompatível | Bloquear alerta decisório |
+| Metric Contract obrigatório ausente ou com versão incompatível | Bloquear alerta decisório |
 | Leitura atrasada mais de cinco minutos | Bloquear alerta decisório |
 | Timestamp duplicado | Bloquear alerta decisório |
 | Completude da janela menor que 90% | Bloquear alerta decisório |
@@ -77,7 +92,7 @@
 | Confiança menor que 85% | Handoff humano |
 | Divergência modelo–sensor | Handoff humano |
 
-## 6 Monitoramento e revisão
+## 7 Monitoramento e revisão
 
 - registrar cada alteração de threshold com versão, data, autor e justificativa;
 - monitorar alertas bloqueados, falsos positivos e decisões rejeitadas;

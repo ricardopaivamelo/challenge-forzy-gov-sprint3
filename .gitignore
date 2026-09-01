@@ -6,9 +6,7 @@ __pycache__/
 .pytest_cache/
 .coverage
 htmlcov/
+runtime/
 
 # Segredos — NUNCA commitar
 .env
-
-# Saídas grandes/regeneráveis (o modelo é entregável, então NÃO ignorado)
-# models/modelo_falhas.joblib  -> versionado (é entregável)

@@ -1,83 +1,108 @@
-# Challenge Forzy — Governança da Decisão
+# Challenge Sprint 3 — Governança em IA e Business Analytics (GOV)
 
-Repositório da **Challenge Sprint 3 de GBA/GOV** da FIAP: Inteligência Operacional e
-Governança da Decisão para o Digital Twin Forzy.
+[![tests](https://github.com/ricardopaivamelo/challenge-forzy-gov-sprint3/actions/workflows/tests.yml/badge.svg)](https://github.com/ricardopaivamelo/challenge-forzy-gov-sprint3/actions/workflows/tests.yml)
 
-Este projeto é separado do repositório técnico de GenAI, que fornece o contexto dos alertas
-de anomalia:
+Entrega da FIAP para o tema **Inteligência Operacional e Governança da Decisão**, aplicada ao
+Digital Twin Forzy. O repositório formaliza limites de interpretação, implementa o Circuit
+Breaker e define quando a decisão deve ser transferida para um especialista.
 
-<https://github.com/ricardopaivamelo/challenge-forzy-genai-sprint3>
+## Separação entre GOV e GenAI
 
-## Escopo
+Este é o repositório de **GOV**. Ele não contém banco de treinamento, notebooks, modelos ou a
+entrega acadêmica de GenAI. O score do detector é somente um insumo externo governado por este
+projeto.
 
-O trabalho não treina novamente o detector de anomalias. Ele governa a decisão produzida pelo
-modelo: valida métricas de temperatura, vibração e aceleração, classifica estados, bloqueia
-alertas quando a qualidade ou a confiança são insuficientes e encaminha casos críticos para
-revisão humana.
+A origem imutável utilizada é o arquivo
+[`models/anomaly_metrics.json`](https://github.com/ricardopaivamelo/challenge-forzy-genai-sprint3/blob/7ff33d0839593e0f49bf55d70e33b6bc4b25c08e/models/anomaly_metrics.json),
+no commit `7ff33d0839593e0f49bf55d70e33b6bc4b25c08e`. O threshold exato do Autoencoder é
+`0.9512501159120564`, exibido como `0.9513`. O Autoencoder foi adotado no demonstrador por seu
+menor falso positivo entre os detectores de anomalia e pela interpretação do erro de
+reconstrução; o relatório de origem identifica o método estatístico como melhor modelo geral.
+Essa escolha, portanto, não é apresentada como ranking absoluto.
 
-O protótipo é acadêmico e usa cenários determinísticos. Ele não autoriza parada automática de
-motor ou planta.
+Os detalhes auditáveis estão em [`results/provenance.json`](results/provenance.json).
 
-## Demonstração
+## O que a aplicação executa
+
+- classifica temperatura, vibração e aceleração segundo Metric Contracts versionados;
+- compara o score com o threshold exato e exige persistência de três janelas;
+- bloqueia a decisão diante de dado inválido, incompleto, atrasado, incompatível ou incerto;
+- registra o motivo do Circuit Breaker e preserva as evidências;
+- cria handoff para o Engenheiro de Manutenção e persiste a decisão em um histórico JSONL local;
+- nunca comanda parada física do motor ou da planta.
+
+Os parâmetros operacionais ficam centralizados em [`config/decision_policy.json`](config/decision_policy.json)
+e [`config/metric_contracts.json`](config/metric_contracts.json).
+
+## Executar localmente
+
+Requer Python 3.12.
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 streamlit run app.py
 ```
 
-A aplicação apresenta cinco cenários:
+A aplicação oferece cinco cenários reproduzíveis: operação normal, atenção, anomalia confirmada,
+Circuit Breaker por dado inválido e handoff por baixa confiança. O tema escuro é o padrão e pode
+ser trocado pela barra lateral. As validações humanas registradas pela interface são acrescentadas
+em `runtime/handoff_audit.jsonl`; essa pasta de execução não é versionada no Git.
+O arquivo é append-only pela aplicação demonstrativa, mas não substitui um armazenamento industrial
+com controle de concorrência e proteção contra adulteração.
 
-- operação normal;
-- faixa de atenção;
-- anomalia persistente com handoff humano;
-- Circuit Breaker por dado inválido;
-- handoff por baixa confiança.
+## Entregáveis acadêmicos
 
-Também é possível selecionar o cenário por URL, por exemplo:
+- [`docs/entrega/challenge_sprint3_gov.pdf`](docs/entrega/challenge_sprint3_gov.pdf): documento final para leitura;
+- [`docs/entrega/challenge_sprint3_gov.docx`](docs/entrega/challenge_sprint3_gov.docx): versão editável;
+- [`docs/entrega/metric_contracts.pdf`](docs/entrega/metric_contracts.pdf): Metric Contracts formalizados;
+- [`docs/entrega/metric_contracts.docx`](docs/entrega/metric_contracts.docx): versão editável;
+- [`docs/gov/sprint3_documento_vivo.md`](docs/gov/sprint3_documento_vivo.md): fonte textual do documento vivo;
+- [`docs/gov/matriz_supervisao.md`](docs/gov/matriz_supervisao.md): matriz autoral aprovada pelo grupo;
+- [`docs/gov/consideracoes_finais.md`](docs/gov/consideracoes_finais.md): visão crítica aprovada pelo grupo;
+- [`docs/gov/roteiro_video.md`](docs/gov/roteiro_video.md): roteiro de defesa de 3–5 minutos;
+- [`docs/historico/sprint2_mockup.html`](docs/historico/sprint2_mockup.html): mockup histórico preservado;
+- [`figuras/`](figuras): evidências catalogadas no padrão FIAP.
 
-```text
-http://localhost:8501/?scenario=Anomalia%20confirmada
+### Vídeo de defesa
+
+**Pendente de gravação e envio pelo grupo.** O vídeo deve demonstrar a aplicação por 3–5 minutos;
+nenhum link fictício foi inserido. Após o upload, basta acrescentar aqui o endereço definitivo.
+
+## Regenerar os documentos
+
+O documento vivo é autocontido:
+
+```bash
+python scripts/build_gov_documents.py
 ```
 
-## Conteúdo acadêmico
+Para regerar também o Metric Contract com o modelo fornecido pelo professor, informe o arquivo
+explicitamente; o modelo não é redistribuído neste repositório:
 
-- `docs/gov/sprint3_documento_vivo.md`: documentação viva da evolução da governança;
-- `docs/gov/metric_contracts.md`: contratos de temperatura, vibração e aceleração;
-- `docs/gov/roteiro_video.md`: roteiro para o vídeo de 3–5 minutos;
-- `docs/gov/matriz_supervisao_PREENCHER_PELO_GRUPO.md`: matriz autoral para revisão do grupo;
-- `docs/gov/conclusao_PREENCHER_PELO_GRUPO.md`: conclusão autoral para revisão do grupo;
-- `docs/gov/*.docx`: documentos prontos para inspeção e entrega;
-- `figuras/gov_*.png`: evidências visuais catalogáveis.
-
-Os textos da matriz de supervisão e da conclusão devem ser conferidos e aprovados pelo grupo,
-pois representam a reflexão autoral exigida pelo barema.
-
-## Implementação
-
-- `src/governance_contracts.py`: contratos versionados e classificação dos sensores;
-- `src/governance_service.py`: decisão determinística, Circuit Breaker e handoff;
-- `src/demo_scenarios.py`: cenários fixos para demonstração e gravação;
-- `src/dashboard_data.py`: adaptação dos fatos para tabela e registro auditável;
-- `src/acceleration.py`: variável de aceleração derivada para o protótipo;
-- `config/metric_contracts.json`: fonte operacional dos limites;
-- `scripts/build_gov_documents.py`: gerador dos documentos Word.
+```bash
+python scripts/build_gov_documents.py \
+  --metric-template "/caminho/para/modelo-do-professor.docx"
+```
 
 ## Verificação
 
 ```bash
-.venv/bin/python -m pytest -x -vv -p no:cacheprovider tests
+python -m pytest -q
+python -m pip check
+python scripts/build_gov_documents.py --main-output /tmp/challenge_sprint3_gov.docx
 ```
 
-Os testes verificam os contratos, os limites, a qualidade dos dados, os bloqueios, o handoff,
-os cinco cenários e o smoke test da aplicação.
+Os testes cobrem fronteiras dos thresholds, política de decisão, qualidade dos dados, Circuit
+Breaker, handoff, cinco cenários, dashboard e geração portátil do DOCX. O workflow do GitHub
+executa a mesma suíte em Python 3.12 para cada pull request.
 
-## Limites e responsabilidade
+## Limitações declaradas
 
-- os dados e cenários são sintéticos;
-- a aceleração é derivada da vibração no protótipo, não uma medição de acelerômetro;
-- os limites precisam ser recalibrados antes de qualquer uso industrial;
-- score e threshold do modelo vêm da GenAI Sprint 3 e são apenas insumos para governança;
-- alerta significa prioridade de inspeção, não diagnóstico físico;
-- parada de motor ou planta exige decisão humana e não pode ser disparada automaticamente.
+- os dados e os cenários são sintéticos;
+- a aceleração é derivada da vibração, não medida por acelerômetro industrial;
+- temperatura e vibração usam faixas empíricas do protótipo;
+- todos os limites exigem recalibração e validação antes de uso industrial;
+- anomalia indica prioridade de inspeção, não diagnóstico causal;
+- contexto como manutenção recente, mudança de carga e ruído externo permanece sob análise humana.

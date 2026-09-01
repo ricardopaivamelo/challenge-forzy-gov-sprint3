@@ -1,9 +1,15 @@
+from pathlib import Path
+import subprocess
+import sys
 from zipfile import ZipFile
 
 from docx import Document
 from docx.oxml.ns import qn
 
 from scripts.build_gov_documents import build_main_document
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_main_document_builder_creates_valid_docx(tmp_path):
@@ -65,6 +71,32 @@ def test_final_considerations_start_on_a_new_page(tmp_path):
     assert 'w:type="page"' in previous_paragraph_xml
 
 
+def test_scenario_table_keeps_score_values_on_one_line(tmp_path):
+    output = tmp_path / "challenge_sprint3_gov.docx"
+
+    build_main_document(output)
+
+    document = Document(output)
+    scenario_table = next(
+        table
+        for table in document.tables
+        if [cell.text for cell in table.rows[0].cells]
+        == [
+            "Cenário",
+            "Leituras apresentadas",
+            "Score",
+            "Persistência",
+            "Confiança",
+            "Resultado governado",
+        ]
+    )
+    score_width = int(
+        scenario_table._tbl.tblGrid.gridCol_lst[2].get(qn("w:w"))
+    )
+
+    assert score_width >= 800
+
+
 def test_living_document_preserves_detailed_sprint_1_controls(tmp_path):
     output = tmp_path / "challenge_sprint3_gov.docx"
 
@@ -85,6 +117,55 @@ def test_living_document_preserves_detailed_sprint_1_controls(tmp_path):
         "Model Card",
     ):
         assert required_control in text
+
+
+def test_living_document_catalogs_sprint_2_mockup_evidence(tmp_path):
+    output = tmp_path / "challenge_sprint3_gov.docx"
+
+    build_main_document(output)
+
+    document = Document(output)
+    text = "\n".join(paragraph.text for paragraph in document.paragraphs)
+    assert "Mockup navegável da planta baixa na Sprint 2" in text
+    assert "Fonte: Elaborado pelos autores a partir do mockup da Sprint 2 (2025)." in text
+
+
+def test_document_builder_cli_is_portable_for_main_document(tmp_path):
+    output = tmp_path / "challenge_sprint3_gov.docx"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "build_gov_documents.py"),
+            "--main-output",
+            str(output),
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert output.stat().st_size > 100_000
+
+
+def test_metric_contract_cli_requires_an_explicit_template(tmp_path):
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts" / "build_gov_documents.py"),
+            "--metric-output",
+            str(tmp_path / "metric_contracts.docx"),
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert completed.returncode != 0
+    assert "--metric-template" in completed.stderr
 
 
 def test_page_number_is_hidden_from_cover_and_pretextual_pages(tmp_path):

@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forzy Digital-Twin - Planta Baixa Inteligente | Mockup Sprint 2</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; color: #333; }
+        .header { background: linear-gradient(135deg, #3D0066 0%, #6A0DAD 100%); color: white; padding: 20px 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .header h1 { font-size: 24px; margin-bottom: 5px; }
+        .header p { font-size: 12px; opacity: 0.9; }
+        
+        .container { display: flex; height: calc(100vh - 80px); gap: 20px; padding: 20px; }
+        
+        .sidebar { width: 280px; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); overflow-y: auto; }
+        .sidebar h2 { font-size: 14px; font-weight: bold; padding: 15px; background: #f9f9f9; border-bottom: 1px solid #eee; text-transform: uppercase; color: #555; }
+        .sidebar-section { padding: 12px 15px; border-bottom: 1px solid #eee; }
+        .sidebar-section label { display: block; font-size: 11px; font-weight: 600; color: #666; margin-bottom: 8px; }
+        .sidebar-section select, .sidebar-section input { width: 100%; padding: 6px 8px; font-size: 12px; border: 1px solid #ddd; border-radius: 4px; }
+        
+        .legend { padding: 12px 15px; background: #f9f9f9; border-top: 1px solid #eee; }
+        .legend-item { font-size: 11px; margin: 6px 0; display: flex; align-items: center; gap: 8px; }
+        .legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+        .dot-green { background: #4CAF50; }
+        .dot-yellow { background: #FFC107; }
+        .dot-red { background: #F44336; }
+        .dot-gray { background: #999; }
+        
+        .main-content { flex: 1; background: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; flex-direction: column; }
+        
+        .canvas-area { flex: 1; position: relative; background: linear-gradient(to bottom, #fafbfc 0%, #f5f7fa 100%); border: 1px solid #eee; border-radius: 4px 4px 0 0; overflow: auto; }
+        
+        svg { width: 100%; height: 100%; }
+        
+        .motor-icon { cursor: pointer; transition: all 0.2s; }
+        .motor-icon:hover circle { stroke-width: 3; }
+        .motor-icon text { font-size: 11px; font-weight: bold; text-anchor: middle; pointer-events: none; }
+        
+        .detail-panel { height: 280px; background: #f5f7fa; border-top: 1px solid #ddd; border-radius: 0 0 4px 4px; padding: 15px; overflow-y: auto; font-size: 12px; }
+        .detail-panel h3 { color: #3D0066; font-size: 13px; margin-bottom: 10px; font-weight: bold; }
+        .detail-field { margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #ddd; }
+        .detail-field strong { color: #555; display: block; margin-bottom: 3px; }
+        .detail-value { color: #333; line-height: 1.4; }
+        
+        .disclaimer { background: #FFF3CD; border-left: 4px solid #FFC107; padding: 8px 10px; margin-top: 10px; border-radius: 2px; font-size: 11px; color: #856404; }
+        .disclaimer strong { display: block; margin-bottom: 3px; }
+        
+        .badge { display: inline-block; padding: 2px 6px; font-size: 10px; border-radius: 3px; margin: 2px 2px 2px 0; font-weight: 600; }
+        .badge-human { background: #C8E6C9; color: #2E7D32; }
+        .badge-ai { background: #FFE0B2; color: #E65100; }
+        .badge-pending { background: #FFF9C4; color: #F57F17; }
+        
+        .location-text { font-size: 10px; fill: #999; }
+        
+        .empty-state { display: flex; align-items: center; justify-content: center; height: 100%; color: #999; text-align: center; }
+        
+        .footer { padding: 10px 15px; background: #f5f5f5; border-top: 1px solid #ddd; font-size: 11px; color: #666; }
+        
+        .status-indicator { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏭 Forzy Digital-Twin — Planta Baixa Inteligente</h1>
+        <p>Sprint 2 | Demonstração de Governança Visual e Navegação</p>
+    </div>
+
+    <div class="container">
+        <!-- SIDEBAR -->
+        <div class="sidebar">
+            <h2>Filtros & Navegação</h2>
+            <div class="sidebar-section">
+                <label>Perfil de Usuário:</label>
+                <select id="userProfile">
+                    <option>Técnico de Operação</option>
+                    <option>Gestor de Planta</option>
+                    <option>Engenheiro de Dados</option>
+                    <option>Auditor de TI</option>
+                </select>
+            </div>
+            <div class="sidebar-section">
+                <label>Status do Motor:</label>
+                <select id="statusFilter">
+                    <option>Todos</option>
+                    <option>Normal (Verde)</option>
+                    <option>Atenção (Amarelo)</option>
+                    <option>Crítico (Vermelho)</option>
+                </select>
+            </div>
+            <div class="sidebar-section">
+                <label>Linhagem do Dado:</label>
+                <select id="lineageFilter">
+                    <option>Todos</option>
+                    <option>Validado por Humano</option>
+                    <option>IA-Gerado</option>
+                    <option>Pendente</option>
+                </select>
+            </div>
+
+            <div class="legend">
+                <strong style="font-size: 11px; color: #333; display: block; margin-bottom: 10px;">Legenda de Status:</strong>
+                <div class="legend-item">
+                    <div class="legend-dot dot-green"></div>
+                    <span>Normal</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot dot-yellow"></div>
+                    <span>Atenção / Alerta</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot dot-red"></div>
+                    <span>Crítico</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-dot dot-gray"></div>
+                    <span>Sem Dados</span>
+                </div>
+                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ddd; font-size: 11px;">
+                    <strong style="display: block; color: #333; margin-bottom: 6px;">Linhagem de Dados:</strong>
+                    <div class="legend-item">
+                        <span class="badge badge-human">✓ Humano</span> Validado
+                    </div>
+                    <div class="legend-item">
+                        <span class="badge badge-ai">⚙ IA</span> Automático
+                    </div>
+                    <div class="legend-item">
+                        <span class="badge badge-pending">? Pendente</span> Aguarda revisão
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN CONTENT -->
+        <div class="main-content">
+            <!-- CANVAS -->
+            <div class="canvas-area">
+                <svg id="floorPlan" viewBox="0 0 1000 600">
+                    <!-- Grid background -->
+                    <defs>
+                        <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
+                            <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#e0e0e0" stroke-width="0.5"/>
+                        </pattern>
+                    </defs>
+                    <rect width="1000" height="600" fill="url(#grid)" />
+
+                    <!-- Plant layout text labels -->
+                    <text x="50" y="30" class="location-text" font-size="14" font-weight="bold">LINHA 01 - Setor de Compressão</text>
+                    <text x="50" y="350" class="location-text" font-size="14" font-weight="bold">LINHA 02 - Setor de Bombeamento</text>
+
+                    <!-- LINHA 01 motors -->
+                    <!-- Motor 1: MTR-01-001 (Normal, Validado) -->
+                    <g class="motor-icon" data-tag="MTR-01-001" data-status="normal" data-lineage="human" onclick="showDetail(this)">
+                        <circle cx="150" cy="100" r="20" fill="#4CAF50" stroke="#2E7D32" stroke-width="2"/>
+                        <text x="150" y="105" fill="white">M1</text>
+                    </g>
+                    <text x="150" y="135" text-anchor="middle" class="location-text">MTR-01-001</text>
+
+                    <!-- Motor 2: MTR-01-002 (Atenção, IA-Gerado) -->
+                    <g class="motor-icon" data-tag="MTR-01-002" data-status="attention" data-lineage="ai" onclick="showDetail(this)">
+                        <circle cx="300" cy="100" r="20" fill="#FFC107" stroke="#F57F17" stroke-width="2"/>
+                        <text x="300" y="105" fill="white">M2</text>
+                    </g>
+                    <text x="300" y="135" text-anchor="middle" class="location-text">MTR-01-002</text>
+
+                    <!-- Motor 3: MTR-01-003 (Crítico, IA-Gerado) -->
+                    <g class="motor-icon" data-tag="MTR-01-003" data-status="critical" data-lineage="pending" onclick="showDetail(this)">
+                        <circle cx="450" cy="100" r="20" fill="#F44336" stroke="#B71C1C" stroke-width="2"/>
+                        <text x="450" y="105" fill="white">M3</text>
+                    </g>
+                    <text x="450" y="135" text-anchor="middle" class="location-text">MTR-01-003</text>
+
+                    <!-- Motor 4: MTR-01-004 (Normal, Validado) -->
+                    <g class="motor-icon" data-tag="MTR-01-004" data-status="normal" data-lineage="human" onclick="showDetail(this)">
+                        <circle cx="600" cy="100" r="20" fill="#4CAF50" stroke="#2E7D32" stroke-width="2"/>
+                        <text x="600" y="105" fill="white">M4</text>
+                    </g>
+                    <text x="600" y="135" text-anchor="middle" class="location-text">MTR-01-004</text>
+
+                    <!-- Motor 5: MTR-01-005 (Sem dados) -->
+                    <g class="motor-icon" data-tag="MTR-01-005" data-status="nodata" data-lineage="pending" onclick="showDetail(this)">
+                        <circle cx="750" cy="100" r="20" fill="#999" stroke="#666" stroke-width="2"/>
+                        <text x="750" y="105" fill="white">M5</text>
+                    </g>
+                    <text x="750" y="135" text-anchor="middle" class="location-text">MTR-01-005</text>
+
+                    <!-- LINHA 02 motors -->
+                    <!-- Motor 6: MTR-02-001 (Normal, Validado) -->
+                    <g class="motor-icon" data-tag="MTR-02-001" data-status="normal" data-lineage="human" onclick="showDetail(this)">
+                        <circle cx="150" cy="350" r="20" fill="#4CAF50" stroke="#2E7D32" stroke-width="2"/>
+                        <text x="150" y="355" fill="white">M6</text>
+                    </g>
+                    <text x="150" y="385" text-anchor="middle" class="location-text">MTR-02-001</text>
+
+                    <!-- Motor 7: MTR-02-002 (Atenção, Validado) -->
+                    <g class="motor-icon" data-tag="MTR-02-002" data-status="attention" data-lineage="human" onclick="showDetail(this)">
+                        <circle cx="300" cy="350" r="20" fill="#FFC107" stroke="#F57F17" stroke-width="2"/>
+                        <text x="300" y="355" fill="white">M7</text>
+                    </g>
+                    <text x="300" y="385" text-anchor="middle" class="location-text">MTR-02-002</text>
+
+                    <!-- Motor 8: MTR-02-003 (Crítico, Validado) -->
+                    <g class="motor-icon" data-tag="MTR-02-003" data-status="critical" data-lineage="human" onclick="showDetail(this)">
+                        <circle cx="450" cy="350" r="20" fill="#F44336" stroke="#B71C1C" stroke-width="2"/>
+                        <text x="450" y="355" fill="white">M8</text>
+                    </g>
+                    <text x="450" y="385" text-anchor="middle" class="location-text">MTR-02-003</text>
+
+                    <!-- Motor 9: MTR-02-004 (Normal, IA-Gerado) -->
+                    <g class="motor-icon" data-tag="MTR-02-004" data-status="normal" data-lineage="ai" onclick="showDetail(this)">
+                        <circle cx="600" cy="350" r="20" fill="#4CAF50" stroke="#2E7D32" stroke-width="2"/>
+                        <text x="600" y="355" fill="white">M9</text>
+                    </g>
+                    <text x="600" y="385" text-anchor="middle" class="location-text">MTR-02-004</text>
+
+                    <!-- Motor 10: MTR-02-005 (Atenção, IA-Gerado) -->
+                    <g class="motor-icon" data-tag="MTR-02-005" data-status="attention" data-lineage="ai" onclick="showDetail(this)">
+                        <circle cx="750" cy="350" r="20" fill="#FFC107" stroke="#F57F17" stroke-width="2"/>
+                        <text x="750" y="355" fill="white">M10</text>
+                    </g>
+                    <text x="750" y="385" text-anchor="middle" class="location-text">MTR-02-005</text>
+                </svg>
+            </div>
+
+            <!-- DETAIL PANEL -->
+            <div class="detail-panel" id="detailPanel">
+                <div class="empty-state">
+                    <div>👈 Clique em um motor na planta para ver detalhes de governança</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        © 2025 Forzy | Demonstração de Governança Visual — Sprint 2 | Clique em qualquer motor (ícone) para ver critérios de clareza, linhagem de dados e justificativa de status
+    </div>
+
+    <script>
+        const motorData = {
+            "MTR-01-001": {
+                nome: "Motor de Indução Trifásico",
+                potencia: "7.5 kW",
+                tensao: "220V",
+                rpm: "1750",
+                marca: "WEG",
+                localizacao: "LINHA 01 — PONTO 05",
+                valorAtual: "Corrente: 18.2 A | Temp: 62°C | Vibração: 2.1 mm/s",
+                status: "Normal ✓",
+                confianca: "N/A (dados validados)",
+                linhagem: "Validado por humano",
+                validador: "Técnico José Silva",
+                dataValidacao: "2025-07-14 09:15",
+                disclaimer: "Dado em tempo real, atualizado a cada 1 minuto. Máquina operando dentro de limites nominais."
+            },
+            "MTR-01-002": {
+                nome: "Motor de Indução Trifásico",
+                potencia: "10 kW",
+                tensao: "220V",
+                rpm: "1750",
+                marca: "Siemens",
+                localizacao: "LINHA 01 — PONTO 15",
+                valorAtual: "Corrente: 24.5 A | Temp: 78°C | Vibração: 4.8 mm/s",
+                status: "Atenção ⚠",
+                confianca: "92% (IA-Gerado)",
+                linhagem: "IA-Automático (não validado)",
+                algoritmo: "Isolation Forest v3.2.1",
+                dataExtracao: "2025-07-14 11:23",
+                disclaimer: "Alerta gerado por IA com 92% confiança. Temperatura 3% acima do nominal. Recomenda-se validação por especialista antes de ação."
+            },
+            "MTR-01-003": {
+                nome: "Motor de Indução Trifásico",
+                potencia: "15 kW",
+                tensao: "220V",
+                rpm: "1750",
+                marca: "ABB",
+                localizacao: "LINHA 01 — PONTO 25",
+                valorAtual: "Corrente: 32.8 A | Temp: 94°C | Vibração: 8.2 mm/s",
+                status: "Crítico 🔴",
+                confianca: "87% (IA-Gerado)",
+                linhagem: "Pendente de Validação",
+                algoritmo: "LSTM + Isolation Forest",
+                dataExtracao: "2025-07-14 12:45",
+                disclaimer: "ALERTA CRÍTICO! Vibração 82% acima da norma ISO. Temperatura máxima atingida. Aguardando validação por especialista. RISCO DE FALHA IMEDIATA."
+            },
+            "MTR-01-004": {
+                nome: "Motor de Indução Trifásico",
+                potencia: "7.5 kW",
+                tensao: "220V",
+                rpm: "1750",
+                marca: "WEG",
+                localizacao: "LINHA 01 — PONTO 35",
+                valorAtual: "Corrente: 17.8 A | Temp: 64°C | Vibração: 2.3 mm/s",
+                status: "Normal ✓",
+                confianca: "N/A (dados validados)",
+                linhagem: "Validado por humano",
+                validador: "Técnico Carlos Mendes",
+                dataValidacao: "2025-07-14 10:30",
+                disclaimer: "Máquina operando normalmente. Todos os parâmetros dentro dos limites. Próxima manutenção preventiva: 2025-08-14."
+            },
+            "MTR-01-005": {
+                nome: "Motor de Indução Trifásico",
+                potencia: "5.5 kW",
+                tensao: "220V",
+                rpm: "1750",
+                marca: "Dutchi Motors",
+                localizacao: "LINHA 01 — PONTO 45",
+                valorAtual: "Sem dados",
+                status: "Sem Dados 🔇",
+                confianca: "N/A",
+                linhagem: "Sensor inativo",
+                ultimoRegistro: "2025-07-14 06:00",
+                motivo: "Sensor em calibração preventiva",
+                disclaimer: "Sensor inativo desde 06:00. Calibração agendada até 14:00. Equipamento não pode ser monitorado no momento."
+            },
+            "MTR-02-001": {
+                nome: "Bomba Centrífuga com Motor Acoplado",
+                potencia: "11 kW",
+                tensao: "220V",
+                rpm: "3000",
+                marca: "Siemens",
+                localizacao: "LINHA 02 — PONTO 10",
+                valorAtual: "Corrente: 25.3 A | Temp: 68°C | Vibração: 2.8 mm/s",
+                status: "Normal ✓",
+                confianca: "N/A (dados validados)",
+                linhagem: "Validado por humano",
+                validador: "Técnico Ana Paula",
+                dataValidacao: "2025-07-14 08:45",
+                disclaimer: "Operação normal. Bomba funcionando conforme especificação. Próxima limpeza de filtro: 2025-07-21."
+            },
+            "MTR-02-002": {
+                nome: "Bomba Centrífuga com Motor Acoplado",
+                potencia: "11 kW",
+                tensao: "220V",
+                rpm: "3000",
+                marca: "WEG",
+                localizacao: "LINHA 02 — PONTO 20",
+                valorAtual: "Corrente: 26.8 A | Temp: 82°C | Vibração: 5.1 mm/s",
+                status: "Atenção ⚠",
+                confianca: "N/A (dados validados)",
+                linhagem: "Validado por humano",
+                validador: "Técnico Roberto Costa",
+                dataValidacao: "2025-07-14 11:00",
+                disclaimer: "Vibração elevada detectada. Especialista recomenda inspeção de rolamentos. Marque manutenção preditiva para 2025-07-16."
+            },
+            "MTR-02-003": {
+                nome: "Bomba Centrífuga com Motor Acoplado",
+                potencia: "15 kW",
+                tensao: "220V",
+                rpm: "3000",
+                marca: "ABB",
+                localizacao: "LINHA 02 — PONTO 30",
+                valorAtual: "Corrente: 31.2 A | Temp: 96°C | Vibração: 7.5 mm/s",
+                status: "Crítico 🔴",
+                confianca: "N/A (dados validados)",
+                linhagem: "Validado por humano",
+                validador: "Especialista em Manutenção",
+                dataValidacao: "2025-07-14 12:30",
+                disclaimer: "CRÍTICO! Falha iminente detectada. Parar a máquina imediatamente. Especialista em bombeamento foi acionado. ETA de intervenção: 30 minutos."
+            },
+            "MTR-02-004": {
+                nome: "Bomba Centrífuga com Motor Acoplado",
+                potencia: "11 kW",
+                tensao: "220V",
+                rpm: "3000",
+                marca: "Siemens",
+                localizacao: "LINHA 02 — PONTO 40",
+                valorAtual: "Corrente: 24.9 A | Temp: 71°C | Vibração: 3.2 mm/s",
+                status: "Normal ✓",
+                confianca: "89% (IA-Gerado)",
+                linhagem: "IA-Automático (não validado)",
+                algoritmo: "Baseline ML v2.1.0",
+                dataExtracao: "2025-07-14 12:50",
+                disclaimer: "Operação normal por IA. Score de confiança: 89%. Dados ainda não revisados por especialista (fila de validação)."
+            },
+            "MTR-02-005": {
+                nome: "Bomba Centrífuga com Motor Acoplado",
+                potencia: "15 kW",
+                tensao: "220V",
+                rpm: "3000",
+                marca: "WEG",
+                localizacao: "LINHA 02 — PONTO 50",
+                valorAtual: "Corrente: 30.5 A | Temp: 85°C | Vibração: 6.2 mm/s",
+                status: "Atenção ⚠",
+                confianca: "91% (IA-Gerado)",
+                linhagem: "IA-Automático (não validado)",
+                algoritmo: "Isolation Forest v3.2.1",
+                dataExtracao: "2025-07-14 13:05",
+                disclaimer: "Alerta de atenção gerado por IA (91% confiança). Vibração acima de limites normais. Aguardando validação de especialista."
+            }
+        };
+
+        function showDetail(element) {
+            const tag = element.getAttribute("data-tag");
+            const data = motorData[tag];
+            const status = element.getAttribute("data-status");
+            const lineage = element.getAttribute("data-lineage");
+
+            let statusEmoji = { "normal": "✓", "attention": "⚠", "critical": "🔴", "nodata": "🔇" }[status];
+            let lineageBadge = {
+                "human": '<span class="badge badge-human">✓ VALIDADO</span>',
+                "ai": '<span class="badge badge-ai">⚙ IA-GERADO</span>',
+                "pending": '<span class="badge badge-pending">? PENDENTE</span>'
+            }[lineage];
+
+            let html = `
+                <h3>${statusEmoji} ${tag}</h3>
+                <div class="detail-field">
+                    <strong>Equipamento:</strong>
+                    <div class="detail-value">${data.nome}</div>
+                </div>
+                <div class="detail-field">
+                    <strong>Localização:</strong>
+                    <div class="detail-value">${data.localizacao}</div>
+                </div>
+                <div class="detail-field">
+                    <strong>Especificação:</strong>
+                    <div class="detail-value">${data.potencia} | ${data.tensao} | ${data.rpm} RPM | Marca: ${data.marca}</div>
+                </div>
+                <div class="detail-field">
+                    <strong>Valor Atual (D+0):</strong>
+                    <div class="detail-value">${data.valorAtual}</div>
+                </div>
+                <div class="detail-field">
+                    <strong>Status:</strong>
+                    <div class="detail-value">${data.status}</div>
+                </div>
+                <div class="detail-field">
+                    <strong>Linhagem do Dado:</strong>
+                    <div class="detail-value">${lineageBadge}</div>
+                </div>
+            `;
+
+            if (data.validador) {
+                html += `<div class="detail-field">
+                    <strong>Validado Por:</strong>
+                    <div class="detail-value">${data.validador} em ${data.dataValidacao}</div>
+                </div>`;
+            }
+            if (data.algoritmo) {
+                html += `<div class="detail-field">
+                    <strong>Algoritmo / Score:</strong>
+                    <div class="detail-value">${data.algoritmo}<br/>Confiança: ${data.confianca}</div>
+                </div>`;
+            }
+            if (data.ultimoRegistro) {
+                html += `<div class="detail-field">
+                    <strong>Último Registro:</strong>
+                    <div class="detail-value">${data.ultimoRegistro} (${data.motivo})</div>
+                </div>`;
+            }
+
+            html += `<div class="disclaimer"><strong>📋 Disclaimer & Justificativa:</strong> ${data.disclaimer}</div>`;
+
+            document.getElementById("detailPanel").innerHTML = html;
+        }
+
+        // Initialize with first motor
+        document.addEventListener("DOMContentLoaded", () => {
+            showDetail(document.querySelector("[data-tag='MTR-01-001']"));
+        });
+    </script>
+</body>
+</html>
