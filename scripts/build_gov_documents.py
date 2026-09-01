@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import argparse
+import json
 from pathlib import Path
 import re
-import sys
 
 from docx import Document
 from docx.enum.section import WD_ORIENT, WD_SECTION
@@ -16,16 +17,21 @@ from docx.shared import Cm, Inches, Pt, RGBColor
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DOCS_SKILL = Path(
-    "/home/ricardo/.codex/plugins/cache/openai-primary-runtime/documents/"
-    "26.826.12353/skills/documents"
+DECISION_POLICY = json.loads(
+    (ROOT / "config" / "decision_policy.json").read_text(encoding="utf-8")
 )
-sys.path.insert(0, str(DOCS_SKILL / "scripts"))
-from table_geometry import (  # noqa: E402
-    apply_table_geometry,
-    column_widths_from_weights,
-    section_content_width_dxa,
-)
+if __package__:
+    from scripts.table_geometry import (
+        apply_table_geometry,
+        column_widths_from_weights,
+        section_content_width_dxa,
+    )
+else:
+    from table_geometry import (
+        apply_table_geometry,
+        column_widths_from_weights,
+        section_content_width_dxa,
+    )
 
 
 BLUE = "1F4E78"
@@ -169,18 +175,23 @@ def add_toc(doc) -> None:
         (1, "3.5 Dicionário de metadados", 8),
         (1, "3.6 Fairness e limitações", 8),
         (0, "4 EVOLUÇÃO DA GOVERNANÇA — SPRINT 2", 9),
-        (1, "4.1 Governança visual", 9),
-        (1, "4.2 Rastreabilidade de TAG e localização", 9),
-        (1, "4.3 Correções aplicadas a partir do feedback", 9),
-        (0, "5 INTELIGÊNCIA OPERACIONAL E GOVERNANÇA DA DECISÃO — SPRINT 3", 10),
-        (1, "5.1 Metric Contracts", 10),
-        (1, "5.2 Definição operacional de anomalia", 10),
-        (1, "5.3 Ações automáticas permitidas", 11),
-        (1, "5.4 Circuit Breaker", 11),
-        (1, "5.5 Protocolo de handoff humano", 11),
-        (1, "5.6 Informação explícita e informação tácita", 12),
-        (0, "6 EVIDÊNCIAS DE FUNCIONAMENTO", 13),
-        (0, "7 CONSIDERAÇÕES FINAIS", 18),
+        (1, "4.1 Entrega histórica: mockup da planta baixa inteligente", 10),
+        (1, "4.2 Critérios visuais e disclaimers", 11),
+        (1, "4.3 Rastreabilidade de navegação: TAG e localização", 12),
+        (1, "4.4 Matriz de visibilidade operacional: RBAC na interface", 12),
+        (1, "4.5 Linhagem de dados: validado versus IA-gerado", 12),
+        (1, "4.6 Limite do mockup estático", 13),
+        (1, "4.7 Evolução do mockup estático para a aplicação executável", 13),
+        (1, "4.8 Correções aplicadas a partir do feedback", 15),
+        (0, "5 INTELIGÊNCIA OPERACIONAL E GOVERNANÇA DA DECISÃO — SPRINT 3", 15),
+        (1, "5.1 Metric Contracts", 15),
+        (1, "5.2 Definição operacional de anomalia", 16),
+        (1, "5.3 Ações automáticas permitidas", 16),
+        (1, "5.4 Circuit Breaker", 16),
+        (1, "5.5 Protocolo de handoff humano", 17),
+        (1, "5.6 Informação explícita e informação tácita", 18),
+        (0, "6 EVIDÊNCIAS DE FUNCIONAMENTO", 19),
+        (0, "7 CONSIDERAÇÕES FINAIS", 24),
     ]
     for level, title, page in entries:
         paragraph = doc.add_paragraph()
@@ -393,7 +404,7 @@ def parse_main_markdown(doc, markdown_path: Path) -> None:
             continue
         if line.startswith("**Figura"):
             figure_count += 1
-            if figure_count > 1:
+            if figure_count > 2:
                 doc.add_page_break()
             paragraph = doc.add_paragraph()
             paragraph.paragraph_format.first_line_indent = Cm(0)
@@ -596,7 +607,14 @@ def build_metric_contract(reference: Path, output: Path) -> None:
         ["Threshold/Alerta", "Gatilho", "Incidente/Ação"],
         [
             ["Atenção física", "Sensor na faixa de atenção", "Destacar e monitorar"],
-            ["Anomalia do modelo", "Score ≥ 0,9513", "Exigir 3 janelas persistentes"],
+            [
+                "Anomalia do modelo",
+                (
+                    f"Score ≥ {DECISION_POLICY['model_threshold']:.16f} "
+                    f"(exibido {DECISION_POLICY['display_threshold']:.4f})"
+                ),
+                "Exigir 3 janelas persistentes",
+            ],
             ["Alerta confirmado", "Modelo persistente + evidência física", "Solicitar inspeção humana"],
             ["Circuit Breaker", "Falha de dados, incerteza ou divergência", "Bloquear decisão e registrar motivo"],
             ["Handoff", "Confiança < 85% ou situação contextual", "Encaminhar ao Engenheiro de Manutenção"],
@@ -616,8 +634,41 @@ def build_metric_contract(reference: Path, output: Path) -> None:
     doc.save(output)
 
 
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--main-output",
+        type=Path,
+        default=ROOT / "docs" / "entrega" / "challenge_sprint3_gov.docx",
+        help="Destino do documento vivo em DOCX.",
+    )
+    parser.add_argument(
+        "--metric-template",
+        type=Path,
+        help="Modelo DOCX fornecido pelo professor para gerar o Metric Contract.",
+    )
+    parser.add_argument(
+        "--metric-output",
+        type=Path,
+        help="Destino do Metric Contract; exige --metric-template.",
+    )
+    args = parser.parse_args()
+    if args.metric_output and not args.metric_template:
+        parser.error("--metric-output exige --metric-template")
+    if args.metric_template and not args.metric_output:
+        args.metric_output = ROOT / "docs" / "entrega" / "metric_contracts.docx"
+    return args
+
+
+def main() -> None:
+    args = parse_args()
+    build_main_document(args.main_output)
+    generated = [args.main_output]
+    if args.metric_template:
+        build_metric_contract(args.metric_template, args.metric_output)
+        generated.append(args.metric_output)
+    print("Documentos GOV gerados: " + ", ".join(str(path) for path in generated))
+
+
 if __name__ == "__main__":
-    reference = Path("/home/ricardo/Downloads/Aula_01_Metric_Contract_Modelo - Exemplo.docx")
-    build_metric_contract(reference, ROOT / "docs" / "gov" / "metric_contracts.docx")
-    build_main_document(ROOT / "docs" / "gov" / "challenge_sprint3_gov.docx")
-    print("Documentos GOV gerados.")
+    main()

@@ -13,9 +13,9 @@ POLICY_PATH = ROOT / "config" / "decision_policy.json"
 def test_loads_the_versioned_governance_policy_values():
     policy = load_decision_policy(POLICY_PATH)
 
-    assert policy.model_threshold == 0.9513
-    assert policy.exact_threshold == 0.9513
-    assert policy.display_threshold == 0.95
+    assert policy.model_threshold == 0.9512501159120564
+    assert policy.exact_threshold == 0.9512501159120564
+    assert policy.display_threshold == 0.9513
     assert policy.persistence_windows == 3
     assert policy.minimum_confidence == 0.85
     assert policy.minimum_completeness == 0.90
@@ -37,8 +37,8 @@ def test_loads_the_versioned_governance_policy_values():
 )
 def test_policy_rejects_invalid_limits(field, value):
     values = {
-        "model_threshold": 0.9513,
-        "display_threshold": 0.95,
+        "model_threshold": 0.9512501159120564,
+        "display_threshold": 0.9513,
         "persistence_windows": 3,
         "minimum_confidence": 0.85,
         "minimum_completeness": 0.90,
@@ -83,10 +83,15 @@ def test_provenance_records_immutable_genai_source_and_limited_model_claim():
         (ROOT / "results" / "provenance.json").read_text(encoding="utf-8")
     )
 
-    assert provenance["repository"] == "GenAI"
+    assert provenance["repository"].endswith("challenge-forzy-genai-sprint3")
     assert provenance["commit"] == "7ff33d0839593e0f49bf55d70e33b6bc4b25c08e"
     assert provenance["source"] == "models/anomaly_metrics.json"
+    assert provenance["source_sha256"] == (
+        "4caa11177d4056d8ababa13de5d90d249c8cf7f6eb4175a82aae63bb3432925b"
+    )
     assert provenance["selected_model"] == "Autoencoder"
+    assert provenance["model_threshold"] == 0.9512501159120564
+    assert provenance["best_anomaly_model_in_source"] == "statistical"
     rationale = provenance["selection_rationale"]
     assert "FPR" in rationale
     assert "reconstrução" in rationale

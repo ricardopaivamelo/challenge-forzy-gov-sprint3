@@ -266,7 +266,7 @@ with right:
         "Score / threshold exato",
         f"{decision.anomaly_score:.4f} / {decision.model_threshold:.4f}",
     )
-    st.metric("Threshold de exibição", f"{POLICY.display_threshold:.2f}")
+    st.metric("Threshold de exibição", f"{POLICY.display_threshold:.4f}")
     st.metric(
         "Persistência",
         f"{POLICY.persistence_windows} janelas" if decision.persistent else "Não confirmada",

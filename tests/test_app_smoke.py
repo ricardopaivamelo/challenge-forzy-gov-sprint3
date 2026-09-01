@@ -65,5 +65,5 @@ def test_dashboard_displays_the_configured_threshold_values():
 
     assert not app.exception
     metric_values = [item.value for item in app.metric]
-    assert any(f"{POLICY.display_threshold:.2f}" in value for value in metric_values)
+    assert any(f"{POLICY.display_threshold:.4f}" in value for value in metric_values)
     assert any(f"{POLICY.model_threshold:.4f}" in value for value in metric_values)

@@ -139,15 +139,18 @@ def test_invalid_threshold_is_rejected_before_decision():
 
 
 def test_service_uses_exact_threshold_from_policy_not_display_rounding():
+    score_between_exact_and_display = (
+        POLICY.model_threshold + POLICY.display_threshold
+    ) / 2
     decision = evaluate(
         readings={**NORMAL, "vibracao_mm_s": 9.5},
-        score=POLICY.display_threshold,
+        score=score_between_exact_and_display,
         persistent=True,
     )
 
     assert decision.model_threshold == POLICY.model_threshold
-    assert decision.status == "blocked"
-    assert "divergência" in " ".join(decision.breaker_reasons).lower()
+    assert score_between_exact_and_display < POLICY.display_threshold
+    assert decision.status == "alert"
 
 
 def test_service_uses_policy_for_quality_boundaries():

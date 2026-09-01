@@ -30,11 +30,12 @@ Manutenção preditiva.
 
 ## LISTA DE FIGURAS
 
-- Figura 1 — Operação dos sensores dentro dos Metric Contracts ................................ 13
-- Figura 2 — Sensor na faixa de atenção ........................................................ 14
-- Figura 3 — Anomalia persistente confirmada para inspeção humana ............................... 15
-- Figura 4 — Circuit Breaker acionado por dado inválido ......................................... 16
-- Figura 5 — Handoff acionado por baixa confiança ................................................ 17
+- Figura 1 — Mockup navegável da planta baixa na Sprint 2 ....................................... 10
+- Figura 2 — Operação dos sensores dentro dos Metric Contracts .................................. 19
+- Figura 3 — Sensor na faixa de atenção .......................................................... 20
+- Figura 4 — Anomalia persistente confirmada para inspeção humana ................................. 21
+- Figura 5 — Circuit Breaker acionado por dado inválido ........................................... 22
+- Figura 6 — Handoff acionado por baixa confiança .................................................. 23
 
 # 1 INTRODUÇÃO
 
@@ -61,8 +62,8 @@ horas. As variáveis originais são rotação, vibração, temperatura e corrent
 O detector de anomalias aprende o comportamento normal de cada motor por mediana e intervalo
 interquartil das primeiras 30 leituras. Em seguida, processa janelas de 30 minutos com avanço
 de cinco minutos. O threshold do Autoencoder foi calculado no percentil 99 das janelas normais
-de validação e vale 0,9513. Um alerta só é persistente depois de três janelas consecutivas
-acima desse valor.
+de validação e vale exatamente 0,9512501159120564; a interface o apresenta arredondado como
+0,9513. Um alerta só é persistente depois de três janelas consecutivas acima desse valor.
 
 Para atender ao escopo de governança, o protótipo acrescenta `aceleracao_g`. Essa variável é
 uma simulação equivalente derivada da vibração RMS, considerando componente dominante de 60
@@ -235,9 +236,15 @@ A Sprint 2 evolui a governança para a interface. A planta baixa inteligente é 
 a IA se encontram. Cada elemento visual deve ser governado com clareza, rastreabilidade e
 segurança.
 
-O artefato histórico desta etapa está preservado em [docs/historico/sprint2_mockup.html](../historico/sprint2_mockup.html).
+O artefato histórico desta etapa está preservado em `docs/historico/sprint2_mockup.html`.
 O arquivo mantém o HTML entregue na época, inclusive sua identificação histórica de 2025; a
 aplicação executável e as regras de decisão da Sprint 3 são descritas a seguir.
+
+**Figura 1 — Mockup navegável da planta baixa na Sprint 2**
+
+![Mockup navegável da planta baixa na Sprint 2](../../figuras/gov_s2_01_mockup.png)
+
+Fonte: Elaborado pelos autores a partir do mockup da Sprint 2 (2025).
 
 ## 4.1 Entrega histórica: mockup da planta baixa inteligente
 
@@ -444,7 +451,8 @@ Manutenção”. A ação automática máxima é registrar o evento e solicitar 
 O sistema separa três conceitos:
 
 - **desvio físico:** um sensor ultrapassou o limite de atenção ou crítico de seu contrato;
-- **desvio estatístico:** o score do Autoencoder ultrapassou 0,9513;
+- **desvio estatístico:** o score do Autoencoder ultrapassou o threshold exato
+  0,9512501159120564, exibido de forma arredondada como 0,9513;
 - **anomalia confirmada:** score acima do threshold durante três janelas consecutivas, com
   evidência física e dados aprovados pelo Circuit Breaker.
 
@@ -510,31 +518,31 @@ Fonte: Elaborado pelos autores (2026).
 
 # 6 EVIDÊNCIAS DE FUNCIONAMENTO
 
-**Figura 1 — Operação dos sensores dentro dos Metric Contracts**
+**Figura 2 — Operação dos sensores dentro dos Metric Contracts**
 
 ![Operação normal](../../figuras/gov_s3_01_normal.png)
 
 Fonte: Elaborado pelos autores a partir da aplicação Forzy (2026).
 
-**Figura 2 — Sensor na faixa de atenção**
+**Figura 3 — Sensor na faixa de atenção**
 
 ![Faixa de atenção](../../figuras/gov_s3_02_attention.png)
 
 Fonte: Elaborado pelos autores a partir da aplicação Forzy (2026).
 
-**Figura 3 — Anomalia persistente confirmada para inspeção humana**
+**Figura 4 — Anomalia persistente confirmada para inspeção humana**
 
 ![Anomalia confirmada](../../figuras/gov_s3_03_alert.png)
 
 Fonte: Elaborado pelos autores a partir da aplicação Forzy (2026).
 
-**Figura 4 — Circuit Breaker acionado por dado inválido**
+**Figura 5 — Circuit Breaker acionado por dado inválido**
 
 ![Circuit Breaker](../../figuras/gov_s3_04_circuit_breaker.png)
 
 Fonte: Elaborado pelos autores a partir da aplicação Forzy (2026).
 
-**Figura 5 — Handoff acionado por baixa confiança**
+**Figura 6 — Handoff acionado por baixa confiança**
 
 ![Handoff](../../figuras/gov_s3_05_handoff.png)
 
